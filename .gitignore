@@ -1,0 +1,12 @@
+# Data Privacy (Crucial for CS789)
+data/
+
+# Python Environment
+.venv/
+__pycache__/
+*.pyc
+
+# IDE / Mac files
+.DS_Store
+.idea/
+.ipynb_checkpoints/

@@ -1,0 +1,6 @@
+polars
+scikit-learn
+networkx
+plotly
+ipykernel
+pydantic
