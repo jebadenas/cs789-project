@@ -4,3 +4,6 @@ networkx
 plotly
 ipykernel
 pydantic
+jupyter
+pandas
+pyarrow
