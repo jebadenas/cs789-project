@@ -245,7 +245,10 @@ def _build_team_matrix(
 ) -> ScoreMatrix | None:
     """Build a ScoreMatrix for a single team.
 
-    Handles missing raters (row+column removal) and team dropping.
+    All students (including non-submitters) are kept in the N×N matrix.
+    Non-submitter columns contain NaN to faithfully represent missing data.
+    Each model decides how to handle NaN values.
+    Teams with ≥50% non-submitters are dropped entirely.
     """
     # Collect all unique students (by email) and identify non-submitters
     all_emails: set[str] = set()
@@ -267,7 +270,7 @@ def _build_team_matrix(
         if all(np.isnan(s) for s in scores):
             non_submitters.add(email)
             logger.warning(
-                "Excluding non-submitting rater %s (%s) from team '%s'",
+                "Non-submitting rater %s (%s) in team '%s' — column will be NaN",
                 email_to_name.get(email, "?"),
                 email,
                 team_name,
@@ -286,55 +289,60 @@ def _build_team_matrix(
         )
         return None
 
-    # Build student list (excluding non-submitters), sorted by email
-    active_emails = sorted(all_emails - non_submitters)
-    n = len(active_emails)
-    email_to_idx = {e: i for i, e in enumerate(active_emails)}
+    # Build student list with ALL students, sorted by email
+    all_sorted_emails = sorted(all_emails)
+    n = len(all_sorted_emails)
+    email_to_idx = {e: i for i, e in enumerate(all_sorted_emails)}
 
     students = [
         StudentInfo(name=email_to_name.get(e, ""), email=e, index=i)
-        for i, e in enumerate(active_emails)
+        for i, e in enumerate(all_sorted_emails)
     ]
 
     excluded = [
         StudentInfo(
             name=email_to_name.get(e, ""),
             email=e,
-            index=-1,
+            index=email_to_idx[e],
         )
         for e in sorted(non_submitters)
     ]
 
-    # Build N×N matrix
-    matrix = np.zeros((n, n), dtype=float)
+    # Build N×N matrix: NaN for non-submitter columns, real values elsewhere
+    matrix = np.full((n, n), np.nan, dtype=float)
     for _, giver_email, _, recip_email, score in rows:
-        if giver_email in non_submitters or recip_email in non_submitters:
+        j = email_to_idx.get(giver_email)
+        i = email_to_idx.get(recip_email)
+        if i is None or j is None:
+            continue
+        if giver_email in non_submitters:
+            # Column stays NaN — faithfully represents "No Response"
             continue
         if np.isnan(score):
             continue
-        j = email_to_idx.get(giver_email)
-        i = email_to_idx.get(recip_email)
-        if i is not None and j is not None:
-            matrix[i][j] = score
+        matrix[i][j] = score
 
-    # Point total validation: columns within a team should be consistent.
-    # The expected total per rater is the median column sum (robust to outliers).
-    col_sums = matrix.sum(axis=0)
+    # Point total validation (only for submitters — non-submitter columns are NaN)
+    submitter_indices = [
+        email_to_idx[e] for e in all_sorted_emails if e not in non_submitters
+    ]
+    col_sums = np.nansum(matrix[:, submitter_indices], axis=0)
     median_sum = float(np.median(col_sums))
-    for j, email in enumerate(active_emails):
-        if abs(col_sums[j] - median_sum) > 1.0:
+    for idx, j in enumerate(submitter_indices):
+        email = all_sorted_emails[j]
+        if abs(col_sums[idx] - median_sum) > 1.0:
             logger.warning(
                 "Point total mismatch for rater %s in team '%s': "
                 "expected ~%.0f (team median), got %.0f",
                 email,
                 team_name,
                 median_sum,
-                col_sums[j],
+                col_sums[idx],
             )
 
-    # Cross-check with summary stats
-    for i, email in enumerate(active_emails):
-        row_sum = matrix[i, :].sum()
+    # Cross-check with summary stats (row sums, NaN-aware)
+    for i, email in enumerate(all_sorted_emails):
+        row_sum = float(np.nansum(matrix[i, :]))
         if email in summary_totals:
             expected_total = summary_totals[email]
             if abs(row_sum - expected_total) > 1.0:

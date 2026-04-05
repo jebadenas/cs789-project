@@ -163,40 +163,53 @@ class TestSelfScores:
 
 
 class TestMissingRaterExclusion:
-    """Non-submitting raters are excluded: row+column removed, matrix shrinks."""
+    """Non-submitting raters stay in the N×N matrix with NaN columns."""
 
-    def test_team_with_one_non_submitter_shrinks(self):
-        """Team 14 Neox has 1 non-submitter (Lucia Kim) out of 6 → 5×5 matrix."""
+    def test_team_with_one_non_submitter_keeps_full_size(self):
+        """Team 14 Neox has 1 non-submitter (Lucia Kim) out of 6 → still 6×6."""
         result = parse_session(SESSION_4_2024)
         sm = result[("Team 14 - Neox", "source code")]
 
-        assert sm.matrix.shape == (5, 5)
-        assert len(sm.students) == 5
+        assert sm.matrix.shape == (6, 6)
+        assert len(sm.students) == 6
 
-        # Lucia Kim (skim507) should be excluded
-        active_emails = {s.email for s in sm.students}
-        assert "skim507@aucklanduni.ac.nz" not in active_emails
+        # Lucia Kim (skim507) stays in the student list
+        all_emails = {s.email for s in sm.students}
+        assert "skim507@aucklanduni.ac.nz" in all_emails
 
-        # She should appear in excluded_students
+        # She also appears in excluded_students
         excluded_emails = {s.email for s in sm.excluded_students}
         assert "skim507@aucklanduni.ac.nz" in excluded_emails
 
-    def test_team_with_two_non_submitters_shrinks(self):
-        """Team 7 Noot Noot has 2 non-submitters out of 6 → 4×4 matrix."""
+        # Her column should be all NaN (she didn't submit)
+        lucia_idx = sm.email_to_index["skim507@aucklanduni.ac.nz"]
+        assert np.all(np.isnan(sm.matrix[:, lucia_idx]))
+
+        # Her row should contain real values from peers who rated her
+        assert not np.all(np.isnan(sm.matrix[lucia_idx, :]))
+
+    def test_team_with_two_non_submitters_keeps_full_size(self):
+        """Team 7 Noot Noot has 2 non-submitters out of 6 → still 6×6."""
         result = parse_session(SESSION_4_2024)
         sm = result[("Team 7 - Noot Noot", "source code")]
 
-        assert sm.matrix.shape == (4, 4)
-        assert len(sm.students) == 4
+        assert sm.matrix.shape == (6, 6)
+        assert len(sm.students) == 6
         assert len(sm.excluded_students) == 2
 
-    def test_excluded_students_have_names(self):
+        # Non-submitter columns should be all NaN
+        for excl in sm.excluded_students:
+            col = sm.matrix[:, excl.index]
+            assert np.all(np.isnan(col)), f"{excl.email} column should be all NaN"
+
+    def test_excluded_students_have_names_and_valid_indices(self):
         result = parse_session(SESSION_4_2024)
         sm = result[("Team 14 - Neox", "source code")]
 
         excluded = sm.excluded_students
         assert len(excluded) == 1
         assert excluded[0].name == "Lucia Kim"
+        assert excluded[0].index >= 0, "Excluded students should have valid indices"
 
 
 class TestTeamDrop:
@@ -225,7 +238,7 @@ class TestPointValidation:
         result = parse_session(SESSION_4_2024)
         sm = result[("Team 11 - ExquisiTech", "source code")]
 
-        col_sums = sm.matrix.sum(axis=0)
+        col_sums = np.nansum(sm.matrix, axis=0)
         np.testing.assert_array_equal(col_sums, np.full(6, 60.0))
 
     def test_inconsistent_rater_logged_as_warning(self, caplog):
@@ -260,7 +273,7 @@ class TestSummaryCrossCheck:
         }
 
         for student in sm.students:
-            row_sum = sm.matrix[student.index, :].sum()
+            row_sum = float(np.nansum(sm.matrix[student.index, :]))
             expected = expected_totals[student.email]
             assert row_sum == expected, (
                 f"{student.email}: row sum {row_sum} != summary total {expected}"
