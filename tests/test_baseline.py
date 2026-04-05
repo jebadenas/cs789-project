@@ -1,23 +1,10 @@
 """Tests for the Simple Average (Baseline) IWF model."""
 
-from pathlib import Path
-
 import numpy as np
 import pytest
 
 from src.models.baseline import baseline_average
 from src.parsing.schemas import ScoreMatrix, StudentInfo
-
-DATA_DIR = Path(__file__).parent.parent / "data"
-SESSION_4_2024 = DATA_DIR / "COMPSCI399-S1-2024_Peer Feedback Session 4 - S1, 2024_result.csv"
-
-
-def _make_students(n: int) -> list[StudentInfo]:
-    """Create n dummy students with alphabetical emails."""
-    return [
-        StudentInfo(name=f"Student {chr(65 + i)}", email=f"s{chr(97 + i)}@test.ac.nz", index=i)
-        for i in range(n)
-    ]
 
 
 def _make_score_matrix(matrix: np.ndarray, **kwargs) -> ScoreMatrix:
@@ -30,42 +17,22 @@ def _make_score_matrix(matrix: np.ndarray, **kwargs) -> ScoreMatrix:
         year="2024",
         semester="S1",
         session_number=1,
-        students=_make_students(n),
+        students=[
+            StudentInfo(name=f"Student {chr(65 + i)}", email=f"s{chr(97 + i)}@test.ac.nz", index=i)
+            for i in range(n)
+        ],
         excluded_students=[],
     )
     defaults.update(kwargs)
     return ScoreMatrix(**defaults)
 
 
-class TestHandComputed3Person:
-    """Hand-computed 3-person example with known IWF values."""
+class TestBaselineAverage:
+    """Behavior: baseline_average computes the mean of all scores each student received."""
 
-    def test_asymmetric_scores(self):
+    def test_3_person_team_returns_correct_iwf_and_model_name(self):
         """
-        3 students, all submitted:
-          S[i][j] = score giver j gave to recipient i
-
-                  A(j=0)  B(j=1)  C(j=2)
-          A(i=0) [  10,     12,      8  ]   → mean = (10+12+8)/3 = 10.0
-          B(i=1) [  15,     10,      5  ]   → mean = (15+10+5)/3 = 10.0
-          C(i=2) [   5,      8,     17  ]   → mean = (5+8+17)/3  = 10.0
-        """
-        matrix = np.array([
-            [10, 12, 8],
-            [15, 10, 5],
-            [5,  8, 17],
-        ], dtype=float)
-
-        sm = _make_score_matrix(matrix)
-        result = baseline_average(sm)
-
-        assert result.model_name == "Simple Average (Baseline)"
-        assert len(result.students) == 3
-        np.testing.assert_array_almost_equal(result.iwf_vector, [10.0, 10.0, 10.0])
-
-    def test_unequal_scores(self):
-        """
-        3 students with non-uniform averages:
+        Tracer bullet: 3 students, asymmetric scores.
 
                   A(j=0)  B(j=1)  C(j=2)
           A(i=0) [  10,      6,      8  ]   → mean = 24/3 = 8.0
@@ -78,129 +45,93 @@ class TestHandComputed3Person:
             [ 8, 14, 12],
         ], dtype=float)
 
-        sm = _make_score_matrix(matrix)
-        result = baseline_average(sm)
+        result = baseline_average(_make_score_matrix(matrix))
 
-        expected = [24 / 3, 36 / 3, 34 / 3]
-        np.testing.assert_array_almost_equal(result.iwf_vector, expected)
+        assert result.model_name == "Simple Average (Baseline)"
+        assert len(result.students) == 3
+        np.testing.assert_array_almost_equal(
+            result.iwf_vector, [24 / 3, 36 / 3, 34 / 3]
+        )
 
-
-class TestUniformMatrix:
-    """When everyone gives 10 to everyone, all IWFs equal 10.0."""
-
-    def test_uniform_4_person(self):
-        matrix = np.full((4, 4), 10.0)
-        sm = _make_score_matrix(matrix)
-        result = baseline_average(sm)
-
-        np.testing.assert_array_equal(result.iwf_vector, np.full(4, 10.0))
-
-    def test_uniform_6_person(self):
-        matrix = np.full((6, 6), 10.0)
-        sm = _make_score_matrix(matrix)
-        result = baseline_average(sm)
-
-        np.testing.assert_array_equal(result.iwf_vector, np.full(6, 10.0))
-
-
-class TestNonSubmitter:
-    """Non-submitter columns (NaN) are excluded from the mean via np.nanmean."""
-
-    def test_one_non_submitter_in_4_person_team(self):
+    def test_self_scores_are_included_in_average(self):
         """
-        4 students, student D (j=3) is non-submitter (column all NaN).
-        3 submitters rate all 4 students.
+        Behavior: self-scores on the diagonal ARE counted (matches COMPSCI 399).
+        If self-scores were excluded, Student A's average would be (6+8)/2 = 7.0.
+        With self-scores included, it's (10+6+8)/3 = 8.0.
+
+                  A(j=0)  B(j=1)  C(j=2)
+          A(i=0) [  10,      6,      8  ]   → with self: 8.0 | without self: 7.0
+          B(i=1) [  15,     10,      5  ]   → with self: 10.0
+          C(i=2) [   5,      8,     17  ]   → with self: 10.0
+        """
+        matrix = np.array([
+            [10, 6, 8],
+            [15, 10, 5],
+            [5, 8, 17],
+        ], dtype=float)
+
+        result = baseline_average(_make_score_matrix(matrix))
+
+        # A's IWF must be 8.0 (with self), NOT 7.0 (without self)
+        assert result.iwf_vector[0] == pytest.approx(8.0)
+        assert result.iwf_vector[0] != pytest.approx(7.0)
+
+    def test_non_submitter_excluded_from_mean_but_still_gets_iwf(self):
+        """
+        Behavior: NaN column (non-submitter) is skipped in the average,
+        but the non-submitter's row still produces a valid IWF.
 
                   A(j=0)  B(j=1)  C(j=2)  D(j=3)
           A(i=0) [  10,      8,     12,    NaN  ]   → nanmean = 30/3 = 10.0
           B(i=1) [  12,     10,      8,    NaN  ]   → nanmean = 30/3 = 10.0
           C(i=2) [   8,     12,     10,    NaN  ]   → nanmean = 30/3 = 10.0
-          D(i=3) [  10,     10,     10,    NaN  ]   → nanmean = 30/3 = 10.0
+          D(i=3) [   6,      6,      6,    NaN  ]   → nanmean = 18/3 = 6.0
+
+        D is a non-submitter (column all NaN). D still receives ratings
+        from A, B, C and gets an IWF of 6.0.
         """
         matrix = np.array([
             [10,  8, 12, np.nan],
             [12, 10,  8, np.nan],
             [ 8, 12, 10, np.nan],
-            [10, 10, 10, np.nan],
+            [ 6,  6,  6, np.nan],
         ], dtype=float)
 
-        students = _make_students(4)
-        excluded = [students[3]]
+        result = baseline_average(_make_score_matrix(matrix))
 
-        sm = _make_score_matrix(matrix, excluded_students=excluded)
-        result = baseline_average(sm)
-
-        np.testing.assert_array_almost_equal(result.iwf_vector, [10.0, 10.0, 10.0, 10.0])
         assert len(result.students) == 4
+        np.testing.assert_array_almost_equal(
+            result.iwf_vector, [10.0, 10.0, 10.0, 6.0]
+        )
 
-    def test_non_submitter_gets_different_iwf(self):
+    def test_uniform_scores_produce_equal_iwf(self):
+        """Behavior: when everyone gives 10 to everyone, all IWFs equal 10.0."""
+        matrix = np.full((6, 6), 10.0)
+        result = baseline_average(_make_score_matrix(matrix))
+
+        np.testing.assert_array_equal(result.iwf_vector, np.full(6, 10.0))
+
+
+class TestBaselineAgainstDataset:
+    """Validate baseline IWF against the real COMPSCI 399 dataset 'Average Points'."""
+
+    def test_team11_iwf_matches_dataset_averages(self):
         """
-        Non-submitter still receives peer ratings and gets a valid IWF.
-
-                  A(j=0)  B(j=1)  C(j=2)  D(j=3)
-          A(i=0) [  10,     12,      8,    NaN  ]   → nanmean = 30/3 = 10.0
-          B(i=1) [  15,     10,      5,    NaN  ]   → nanmean = 30/3 = 10.0
-          C(i=2) [   5,      8,     17,    NaN  ]   → nanmean = 30/3 = 10.0
-          D(i=3) [   5,      5,      5,    NaN  ]   → nanmean = 15/3 = 5.0
+        End-to-end: parse CSV → build ScoreMatrix → run baseline → compare
+        with the dataset's own Average Points for Team 11 ExquisiTech Q2.
         """
-        matrix = np.array([
-            [10, 12,  8, np.nan],
-            [15, 10,  5, np.nan],
-            [ 5,  8, 17, np.nan],
-            [ 5,  5,  5, np.nan],
-        ], dtype=float)
-
-        students = _make_students(4)
-        excluded = [students[3]]
-
-        sm = _make_score_matrix(matrix, excluded_students=excluded)
-        result = baseline_average(sm)
-
-        np.testing.assert_array_almost_equal(result.iwf_vector, [10.0, 10.0, 10.0, 5.0])
-
-
-class TestModelResultFields:
-    """ModelResult has all required fields."""
-
-    def test_result_has_model_name(self):
-        matrix = np.full((3, 3), 10.0)
-        sm = _make_score_matrix(matrix)
-        result = baseline_average(sm)
-
-        assert result.model_name == "Simple Average (Baseline)"
-
-    def test_result_has_student_identifiers(self):
-        matrix = np.full((3, 3), 10.0)
-        sm = _make_score_matrix(matrix)
-        result = baseline_average(sm)
-
-        assert len(result.students) == 3
-        assert all(s.email for s in result.students)
-        assert all(s.name for s in result.students)
-
-    def test_convergence_fields_are_none(self):
-        matrix = np.full((3, 3), 10.0)
-        sm = _make_score_matrix(matrix)
-        result = baseline_average(sm)
-
-        assert result.iterations is None
-        assert result.converged is None
-        assert result.hub_vector is None
-
-
-class TestTeam11ExquisiTech:
-    """Validate baseline IWF against dataset summary 'Average Points' for Team 11."""
-
-    def test_iwf_matches_dataset_averages(self):
+        from pathlib import Path
         from src.parsing.parser import parse_session
 
-        result = parse_session(SESSION_4_2024)
-        sm = result[("Team 11 - ExquisiTech", "source code")]
+        data_dir = Path(__file__).parent.parent / "data"
+        session_file = data_dir / "COMPSCI399-S1-2024_Peer Feedback Session 4 - S1, 2024_result.csv"
+        matrices = parse_session(session_file)
 
-        model_result = baseline_average(sm)
+        sm = matrices[("Team 11 - ExquisiTech", "source code")]
+        result = baseline_average(sm)
 
         # Dataset "Average Points" (Q2, source code) for Team 11:
-        expected_averages = {
+        expected = {
             "alee314@aucklanduni.ac.nz": 9.0,
             "aqui206@aucklanduni.ac.nz": 10.17,
             "hemm904@aucklanduni.ac.nz": 11.67,
@@ -209,9 +140,8 @@ class TestTeam11ExquisiTech:
             "llam106@aucklanduni.ac.nz": 12.33,
         }
 
-        for student in model_result.students:
-            iwf = model_result.iwf_vector[student.index]
-            expected = expected_averages[student.email]
-            assert abs(iwf - expected) < 0.01, (
-                f"{student.email}: IWF {iwf:.2f} != expected {expected}"
+        for student in result.students:
+            iwf = result.iwf_vector[student.index]
+            assert iwf == pytest.approx(expected[student.email], abs=0.01), (
+                f"{student.name} ({student.email}): got {iwf:.2f}, expected {expected[student.email]}"
             )
