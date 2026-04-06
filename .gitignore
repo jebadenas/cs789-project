@@ -1,5 +1,8 @@
 # Data Privacy (Crucial for CS789)
-data/
+data/*.csv
+
+# Generated output
+output/
 
 # Python Environment
 .venv/
