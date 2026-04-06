@@ -26,6 +26,7 @@ class ModelResult(BaseModel):
     # Iterative-model convergence metadata
     iterations: Optional[int] = None
     converged: Optional[bool] = None
+    final_l1_norm: Optional[float] = None
 
     # PeerHITS dual-score vector
     hub_vector: Optional[np.ndarray] = None
