@@ -11,6 +11,7 @@ from pathlib import Path
 from src.models.baseline import baseline_average
 from src.models.peerrank import peerrank
 from src.models.webpa import webpa
+from src.models.peerhits import peerhits
 from src.parsing.parser import parse_session
 
 def discover_csvs(data_dir: Path) -> list[Path]:
@@ -22,6 +23,7 @@ MODELS = {
     "baseline": baseline_average,
     "peerrank": peerrank,
     "webpa": webpa,
+    "peerhits": peerhits,
 }
 
 _COLUMNS = [
