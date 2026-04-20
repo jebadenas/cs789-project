@@ -28,7 +28,7 @@ def peerhits(
     Args:
         score_matrix: N×N peer-assessment matrix (matrix[i][j] = score giver j
             gave to recipient i). NaN columns indicate non-submitters.
-        epsilon: Convergence threshold (L2 norm of authority update). Default 1e-6.
+        epsilon: Convergence threshold (L1 norm of authority update). Default 1e-6.
         max_iterations: Iteration cap. Default 1000.
 
     Returns:
@@ -54,7 +54,7 @@ def peerhits(
         new_authority = _l2_normalise(new_authority)
         new_hub = _l2_normalise(new_hub)
 
-        final_delta = float(np.linalg.norm(new_authority - authority))
+        final_delta = float(np.sum(np.abs(new_authority - authority)))
         authority = new_authority
         hub = new_hub
 
