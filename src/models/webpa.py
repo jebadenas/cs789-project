@@ -28,6 +28,12 @@ def webpa(score_matrix: ScoreMatrix) -> ModelResult:
     scores_received = np.nansum(score_matrix.matrix, axis=1)
     mean_scores_received = scores_received.mean()
 
+    if mean_scores_received == 0.0:
+        raise ValueError(
+            "All scores in the matrix are zero. Cannot compute WebPA factors "
+            "— check data quality."
+        )
+
     pa_factors = scores_received / mean_scores_received
     iwf_vector = pa_factors * 10.0
 
