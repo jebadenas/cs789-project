@@ -15,7 +15,8 @@ from src.models.baseline import baseline_average
 from src.models.peerrank_impute import peerrank_impute
 from src.models.peerrank_exclude import peerrank_exclude
 from src.models.webpa import webpa
-from src.models.peerhits import peerhits
+from src.models.peerhits_impute import peerhits_impute
+from src.models.peerhits_exclude import peerhits_exclude
 from src.parsing.parser import parse_session
 
 def discover_csvs(data_dir: Path) -> list[Path]:
@@ -28,7 +29,8 @@ MODELS = {
     "peerrank-impute": peerrank_impute,
     "peerrank-exclude": peerrank_exclude,
     "webpa": webpa,
-    "peerhits": peerhits,
+    "peerhits-impute": peerhits_impute,
+    "peerhits-exclude": peerhits_exclude,
 }
 
 _COLUMNS = [
