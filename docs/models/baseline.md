@@ -10,11 +10,16 @@ Each student in a team of N distributes a fixed pool of 10×N points among all t
 (including themselves). The IWF for student i is the mean of all peer scores they received:
 
 ```
-IWF_i = (1 / (N-1)) × Σ(j≠i) s_ji
+IWF_i = (1 / P_i) × Σ(j≠i, j∈S) s_ji
 ```
 
-where s_ji is the score awarded to student i by peer j. Self-scores are excluded from the
-numerator but the denominator is fixed at N-1 regardless of how many peers actually submitted.
+where s_ji is the score awarded to student i by peer j, S is the set of peers who actually
+submitted reviews, and P_i = |S \ {i}| is the number of submitting peers (excluding self).
+
+Self-scores are excluded from the numerator. The denominator adapts to the number of
+submitting peers rather than being fixed at N-1. This ensures that a student's IWF is not
+penalised by a teammate's non-submission — a missing review is simply ignored rather than
+treated as a zero score.
 
 An IWF of 10 indicates exactly equal contribution. Values above 10 receive a grade uplift;
 values below 10 attract a penalty. The individual grade is computed as:
@@ -45,8 +50,8 @@ These limitations motivate the advanced models (PeerRank, WebPA, PeerHITS).
 
 ## Algorithm Walkthrough
 
-1. For each student i, collect all scores they received from peers j ≠ i.
-2. Sum those scores and divide by N-1.
+1. For each student i, collect all scores they received from peers j ≠ i who submitted.
+2. Sum those scores and divide by the number of submitting peers.
 3. The result is IWF_i directly — no iteration, no normalisation.
 
 That's it. The baseline is a plain mean of received scores, computed independently per
@@ -58,18 +63,21 @@ student.
 
 **File:** `src/models/baseline.py`
 
-The implementation uses `np.nanmean` over each row of the score matrix rather than
-implementing the mean manually. This is deliberate: `nanmean` automatically skips NaN
-values, which represent non-submitters (students whose entire column is NaN). A
-non-submitter's column is excluded from any student's average without special-casing.
+The implementation uses `np.nanmean` over each row of the score matrix after setting the
+diagonal (self-scores) to NaN. This is deliberate:
+
+- Setting the diagonal to NaN excludes self-scores from the average.
+- `nanmean` automatically skips NaN values, which also represent non-submitters (students
+  whose entire column is NaN). A non-submitter's missing scores are excluded from any
+  student's average without special-casing, and the denominator adapts to the number of
+  peers who actually submitted.
 
 ```python
-iwf_vector = np.nanmean(score_matrix.matrix, axis=1)
+np.fill_diagonal(matrix, np.nan)
+iwf_vector = np.nanmean(matrix, axis=1)
 ```
 
-`axis=1` computes the mean across columns (givers) for each row (recipient). The diagonal
-(self-scores) is included in the mean — this matches the COMPSCI 399 convention confirmed
-by the dataset's own "Average Points" column.
+`axis=1` computes the mean across columns (givers) for each row (recipient).
 
 **NaN handling:** Non-submitters have an entire NaN column. `nanmean` skips them, so
 the denominator for other students' averages adjusts automatically to the number of
@@ -98,18 +106,18 @@ C(i=2)  [   8,     14,     12  ]
 
 ### Computation
 
-```
-IWF_A = (10 + 6 + 8) / 3  =  24 / 3  =  8.000
-IWF_B = (12 + 10 + 14) / 3 = 36 / 3  = 12.000
-IWF_C = (8 + 14 + 12) / 3  = 34 / 3  ≈ 11.333
-```
+Self-scores (diagonal) are excluded:
 
-Note: self-scores (diagonal) are included, matching COMPSCI 399 behaviour.
+```
+IWF_A = (6 + 8) / 2   = 14 / 2  =  7.000
+IWF_B = (12 + 14) / 2 = 26 / 2  = 13.000
+IWF_C = (8 + 14) / 2  = 22 / 2  = 11.000
+```
 
 ### Expected output
 
 ```
-iwf_vector = [8.000, 12.000, 11.333]
+iwf_vector = [7.000, 13.000, 11.000]
 ```
 
 ---

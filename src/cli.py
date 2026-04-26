@@ -4,12 +4,16 @@ from __future__ import annotations
 
 import argparse
 import csv
+import math
 import sys
 from datetime import datetime
 from pathlib import Path
 
+import numpy as np
+
 from src.models.baseline import baseline_average
-from src.models.peerrank import peerrank
+from src.models.peerrank_impute import peerrank_impute
+from src.models.peerrank_exclude import peerrank_exclude
 from src.models.webpa import webpa
 from src.models.peerhits import peerhits
 from src.parsing.parser import parse_session
@@ -21,7 +25,8 @@ def discover_csvs(data_dir: Path) -> list[Path]:
 
 MODELS = {
     "baseline": baseline_average,
-    "peerrank": peerrank,
+    "peerrank-impute": peerrank_impute,
+    "peerrank-exclude": peerrank_exclude,
     "webpa": webpa,
     "peerhits": peerhits,
 }
@@ -138,7 +143,8 @@ def run(argv: list[str] | None = None) -> Path:
                 print(f"  SKIPPED {team} [{model_name}]: {e}", file=sys.stderr)
                 continue
             for s in sm.students:
-                iwf = float(result.iwf_vector[s.index])
+                iwf_raw = float(result.iwf_vector[s.index])
+                iwf = None if np.isnan(iwf_raw) else round(iwf_raw, 4)
                 rows.append({
                     "session": session,
                     "team": team,
@@ -146,13 +152,13 @@ def run(argv: list[str] | None = None) -> Path:
                     "student_name": s.name,
                     "student_email": s.email,
                     "model": model_name,
-                    "iwf": round(iwf, 4),
+                    "iwf": iwf,
                     "converged": result.converged,
                     "iterations": result.iterations,
                     "final_l1_norm": result.final_l1_norm,
                 })
                 key = (team, question, s.name)
-                summary.setdefault(key, {})[model_name] = iwf
+                summary.setdefault(key, {})[model_name] = iwf_raw
 
     # Write CSV
     with open(output_path, "w", newline="") as f:
@@ -185,7 +191,13 @@ def _print_summary(
             print("  " + "-" * (30 + 12 * len(model_names)))
 
         values = [model_iwfs.get(m, float("nan")) for m in model_names]
-        print(row_fmt.format(student_name, *values))
+        parts = [f"  {student_name:<30}"]
+        for v in values:
+            if math.isnan(v):
+                parts.append(f"  {'N/A':>10}")
+            else:
+                parts.append(f"  {v:>10.3f}")
+        print("".join(parts))
 
 
 def main() -> None:
