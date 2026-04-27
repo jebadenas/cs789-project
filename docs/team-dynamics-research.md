@@ -22,6 +22,7 @@ The key finding is that classical community detection algorithms (Louvain, Leide
 4. [Recommended Approach: Graph Metrics for Team Dynamics](#4-recommended-approach-graph-metrics-for-team-dynamics)
    - 4.1 [Metric Definitions](#41-metric-definitions)
    - 4.2 [Classification Schema](#42-classification-schema)
+   - 4.3 [Evaluating Model Performance per Dynamic Type](#43-evaluating-model-performance-per-dynamic-type)
 5. [Visualisation Strategies](#5-visualisation-strategies)
    - 5.1 [Per-Team Directed Graph (Force Layout)](#51-per-team-directed-graph-force-layout)
    - 5.2 [Radar/Spider Chart](#52-radarspider-chart)
@@ -390,6 +391,68 @@ This calibration should be done as a pre-processing step on the full dataset bef
 
 ---
 
+### 4.3 Evaluating Model Performance per Dynamic Type
+
+#### The Ground Truth Problem
+
+For real historical teams, there is no observable "true" IWF against which model outputs can be checked. Direct accuracy measurement on the COMPSCI 399 dataset is therefore impossible. This is a well-known challenge in the peer assessment literature: iterative weighting models were specifically developed *because* ground truth is unavailable in practice[^26].
+
+Two complementary evaluation lenses address this:
+
+---
+
+#### Lens 1 — Synthetic Evaluation (Controlled Ground Truth)
+
+The approach established by prior IWF comparison studies[^26] is Monte Carlo simulation: generate synthetic teams with known "true" contribution vectors and specific injected dynamics, then measure how accurately each model recovers the true vector. This extends naturally from the project's planned attack simulation (Phase 4):
+
+| Injected Dynamic | Synthetic Setup | What to Measure |
+|-----------------|----------------|-----------------|
+| **Cohesive** | Scores proportional to true contributions + Gaussian noise | RMSE baseline; establishes expected accuracy under honest reporting |
+| **Collusive** | All members give uniformly high scores | RMSE; tests whether iterative models distinguish this from Cohesive |
+| **Free-rider** | One member receives uniformly low scores from all peers | RMSE; particularly relevant for Baseline vs. PeerRank |
+| **Dominant member** | Two members concentrate scores on one recipient | RMSE; PeerHITS amplification effect expected |
+| **Conflict** | Two sub-groups give low scores across group boundaries | RMSE; tests model stability under adversarial conditions |
+
+For teams of N = 4, 5, 6 (matching real data), 100 Monte Carlo permutations per dynamic type produce a distribution of RMSE values per model per dynamic. This directly answers: *"which model recovers the true IWF most accurately under each team condition?"*
+
+---
+
+#### Lens 2 — Real Data Evaluation (Delta as Proxy)
+
+For real teams without ground truth, cross-model divergence (Delta) serves as the proxy signal. The hypothesis is:
+
+> *Models agree when scoring is honest and proportional (Cohesive teams → small Delta). Models disagree when scoring departs from honest proportionality (Collusive, Dominant-member, Conflict → large Delta).*
+
+Operationally:
+1. Compute Delta for each model pair (Baseline–PeerRank, Baseline–PeerHITS, Baseline–WebPA, etc.) for every team matrix
+2. Classify each team by dynamic label using §4.2 thresholds
+3. Compare Delta distributions across dynamic categories using descriptive statistics and box plots
+
+If the hypothesis holds, Collusive and Dominant-member teams should show significantly higher Delta than Cohesive teams. This validates two things simultaneously: (1) the classification labels correspond to real scoring anomalies, and (2) the Delta signal is a reliable red flag for instructor attention — the core claim of RQ3.
+
+---
+
+#### Connecting the Two Lenses
+
+| Lens | Data Source | What It Answers |
+|------|-------------|-----------------|
+| Synthetic (Monte Carlo) | Generated teams with known IWF | Which model is *most accurate* per dynamic type? |
+| Real data (Delta proxy) | COMPSCI 399 historical dataset | Does the red-flag signal *fire on the right teams*? |
+
+Together they answer the practical question: *"given a flagged team, which model should an instructor trust?"*
+
+---
+
+#### Precedent: CATME and Related Work
+
+The **CATME** (Comprehensive Assessment of Team Member Effectiveness) system — widely deployed in engineering capstone courses — uses a directly analogous strategy: it classifies teams and students by marking pattern (overconfident, underconfident, manipulator, conflict, clique) and uses those labels to generate instructor alerts[^27]. This validates the label-driven classification approach at scale.
+
+The novel contribution of this project relative to CATME is connecting those dynamic labels to a comparative evaluation of IWF models — asking not just *"is this team unusual?"* but *"which model is most reliable for this type of team?"* CATME does not perform this comparison.
+
+A 2025 paper, "Decoding Peer Assessment: An Algorithm to Navigate Group Problems Detection"[^28], independently proposes group-problem detection from peer assessment patterns, further confirming that dynamic-based classification is an active research direction.
+
+---
+
 ## 5. Visualisation Strategies
 
 All visualisation approaches below use libraries already in the project's `requirements.txt` (Plotly, NetworkX, Pandas)[^4].
@@ -593,6 +656,9 @@ This would compute the team profile, generate labels, and produce interactive Pl
 | Girvan–Newman is the most suitable *pure clustering* method for this scale | **Medium** | Works on small graphs, but its output (partitions) may not directly map to dynamic labels |
 | The proposed classification schema captures real team dynamics | **Medium** | Reasonable heuristics based on SNA literature, but validation against ground truth (e.g., instructor assessments) is needed |
 | Spectral clustering could work with symmetrised matrices | **Low** | Theoretically possible, but symmetrisation loses directional information which is critical for detecting asymmetric dynamics |
+| Synthetic Monte Carlo simulation can measure model accuracy per dynamic type | **High** | Established methodology in IWF literature[^26]; extends naturally from the planned attack simulation (Phase 4) |
+| Cross-model Delta stratified by dynamic label will validate the classification and red-flag signal | **Medium** | Hypothesis is theoretically sound but requires empirical confirmation on COMPSCI 399 data; relies on Delta being a reliable proxy for scoring anomalies |
+| CATME-style label classification is applicable to capstone peer scores | **High** | CATME is deployed at scale in engineering capstone courses[^27]; this project applies the same classification logic to a different institutional dataset |
 
 ---
 
@@ -613,6 +679,9 @@ This would compute the team profile, generate labels, and produce interactive Pl
 13. Fortunato, S. and Barthélemy, M. "Resolution limit in community detection." *Proceedings of the National Academy of Sciences*, 104(1):36–41, 2007. [doi:10.1073/pnas.0605965104](https://doi.org/10.1073/pnas.0605965104). — Foundational paper on the modularity resolution limit.
 14. Hagberg, A.A., Schult, D.A. and Swart, P.J. "Exploring network structure, dynamics, and function using NetworkX." In *Proceedings of the 7th Python in Science Conference (SciPy 2008)*, pp. 11–15, 2008. Available at [https://conference.scipy.org/proceedings/scipy2008/paper_2/](https://conference.scipy.org/proceedings/scipy2008/paper_2/). — Primary NetworkX reference.
 15. Pedregosa, F. et al. "Scikit-learn: Machine learning in Python." *Journal of Machine Learning Research*, 12:2825–2830, 2011. Available at [https://jmlr.org/papers/v12/pedregosa11a.html](https://jmlr.org/papers/v12/pedregosa11a.html). — Primary scikit-learn reference.
+16. Lejk, M. and Wyvill, M. "The effect of the inclusion of self-assessment with peer assessment of contributions to a group project: a quantitative study of secret and agreed assessments." *Assessment & Evaluation in Higher Education*, 26(6):551–561, 2001. — IWF method evaluation; establishes that simpler IWF variants outperform complex ones. For Monte Carlo methodology applied to IWF comparison, see: [doi:10.1080/02602938.2017.1416457](https://doi.org/10.1080/02602938.2017.1416457).
+17. Ohland, M.W., Loughry, M.L., Woehr, D.J., Bullard, L.G., Felder, R.M., Finelli, C.J., Layton, R.A., Pomeranz, H.R. and Schmucker, D.G. "The Comprehensive Assessment of Team Member Effectiveness: Development of a Behaviorally Anchored Rating Scale for Self and Peer Evaluation." *Academy of Management Learning & Education*, 11(4):609–630, 2012. [doi:10.5465/amle.2010.0177](https://doi.org/10.5465/amle.2010.0177). — CATME system; describes marking-pattern classification (overconfident, manipulator, conflict, clique) and instructor alert generation in engineering capstone courses. System available at [https://info.catme.org](https://info.catme.org).
+18. Mitrovic, A. et al. "Decoding Peer Assessment: An Algorithm to Navigate Group Problems Detection." In *Proceedings of the International Conference on Artificial Intelligence in Education (AIED)*, Springer, 2025. [doi:10.1007/978-3-031-98459-4_31](https://doi.org/10.1007/978-3-031-98459-4_31). — Group-problem detection from peer assessment patterns; independently confirms dynamic-based classification as a productive research direction.
 
 ---
 
@@ -667,3 +736,9 @@ This would compute the team profile, generate labels, and produce interactive Pl
 [^24]: Fruchterman, T.M.J. and Reingold, E.M. "Graph drawing by force-directed placement." *Software: Practice and Experience*, 21(11):1129–1164, 1991. [doi:10.1002/spe.4380211102](https://doi.org/10.1002/spe.4380211102). NetworkX `spring_layout`: [https://networkx.org/documentation/stable/reference/generated/networkx.drawing.layout.spring_layout.html](https://networkx.org/documentation/stable/reference/generated/networkx.drawing.layout.spring_layout.html).
 
 [^25]: Plotly Python documentation, "Network Graphs in Python": [https://plotly.com/python/network-graphs/](https://plotly.com/python/network-graphs/) — Constructing `go.Scatter` traces for edges (mode='lines') and nodes (mode='markers') from NetworkX graph positions.
+
+[^26]: Monte Carlo IWF evaluation methodology: generates synthetic teams with known true contribution vectors, injects specific dynamics (honest, collusive, free-rider, outlier), and measures RMSE of each IWF model's output. See [doi:10.1080/02602938.2017.1416457](https://doi.org/10.1080/02602938.2017.1416457) and Walsh (2014) [Ref 2], §5 — both use synthetic simulation as the primary evaluation method. In this project, implemented in `src/attacks/` (Phase 4) extended to cover team dynamic types, not just attack vectors.
+
+[^27]: CATME system (Ohland et al., 2012) [Ref 17]: classifies students by marking pattern flags — *overconfident* (self-rated high, peer-rated low), *underconfident* (inverse), *manipulator* (inflating specific peers), *conflict* (bi-directionally low scores), *clique* (sub-group mutual inflation). Flags trigger instructor alerts without requiring ground truth IWFs. Available at [https://info.catme.org/features/peer-evaluation/](https://info.catme.org/features/peer-evaluation/).
+
+[^28]: Mitrovic et al. (2025) [Ref 18]: proposes an algorithm for detecting group problems (free-riders, social loafing, conflict) from peer assessment patterns. Published AIED 2025. Independently validates the metric-based group classification approach used in this project.
