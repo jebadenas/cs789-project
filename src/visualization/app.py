@@ -25,6 +25,8 @@ from src.models.baseline import baseline_average
 from src.models.peerrank import peerrank
 from src.models.webpa import webpa
 from src.models.peerhits import peerhits
+from src.models.types import ModelResult
+from src.evaluation.rank_reversal import compute_rank_reversals
 from src.parsing.parser import parse_session
 from src.visualization.force_layout import force_layout
 
@@ -45,6 +47,8 @@ MODEL_COLORS = {
     "peerhits": "#AB63FA",
 }
 
+ADVANCED_MODELS = ["peerrank", "webpa", "peerhits"]
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -59,17 +63,25 @@ def _load_matrices(csv_path: Path) -> dict:
 
 
 def _run_models(score_matrix) -> dict[str, dict]:
-    """Run all models on a ScoreMatrix; return {model_name: {student_name: iwf}}."""
+    """Run all models on a ScoreMatrix.
+
+    Returns {model_name: {"iwfs": {name: value}, "result": ModelResult | None, "error": str | None}}.
+    """
     results = {}
     for name, fn in MODELS.items():
         try:
             result = fn(score_matrix)
-            results[name] = {
+            iwfs = {
                 s.name: round(float(result.iwf_vector[s.index]), 3)
                 for s in score_matrix.students
             }
-        except ValueError:
-            results[name] = {s.name: None for s in score_matrix.students}
+            results[name] = {"iwfs": iwfs, "result": result, "error": None}
+        except ValueError as e:
+            results[name] = {
+                "iwfs": {s.name: None for s in score_matrix.students},
+                "result": None,
+                "error": str(e),
+            }
     return results
 
 
@@ -178,6 +190,32 @@ app.layout = html.Div(
             html.Div(id="results-table"),
         ]),
 
+        # --- Rank reversal summary ---
+        html.Div([
+            html.H4("Rank Reversals (vs Baseline)", style={"marginBottom": "10px", "marginTop": "20px"}),
+            html.P(
+                "Pairs where the baseline ranking is reversed by an advanced model "
+                "(δ = 1.5 IWF points on baseline side).",
+                style={"color": "#666", "fontSize": "13px", "marginTop": "0"},
+            ),
+            html.Div(id="reversal-table"),
+        ]),
+
+        # --- Export buttons ---
+        html.Div(
+            style={"marginTop": "30px", "marginBottom": "20px", "display": "flex", "gap": "10px"},
+            children=[
+                html.Button("Export Bar Chart as HTML", id="export-bar-btn",
+                            style={"padding": "8px 16px", "cursor": "pointer"}),
+                html.Button("Export Force Graph as HTML", id="export-force-btn",
+                            style={"padding": "8px 16px", "cursor": "pointer"}),
+                html.Button("Export Full Dashboard as HTML", id="export-full-btn",
+                            style={"padding": "8px 16px", "cursor": "pointer"}),
+            ],
+        ),
+        html.Div(id="export-status", style={"color": "#666", "fontSize": "13px"}),
+        dcc.Download(id="download-html"),
+
         dcc.Store(id="matrices-store"),
     ],
 )
@@ -219,6 +257,7 @@ def update_dropdowns_on_csv_change(csv_path: str):
     Output("force-graph", "figure"),
     Output("bar-chart", "figure"),
     Output("results-table", "children"),
+    Output("reversal-table", "children"),
     Input("csv-dropdown", "value"),
     Input("team-dropdown", "value"),
     Input("question-dropdown", "value"),
@@ -234,7 +273,7 @@ def update_dashboard(csv_path: str, team: str, question: str):
     )
 
     if key not in matrices:
-        return empty_fig, empty_fig, html.P("No data available.")
+        return empty_fig, empty_fig, html.P("No data available."), html.P("No data available.")
 
     sm = matrices[key]
     model_results = _run_models(sm)
@@ -246,7 +285,7 @@ def update_dashboard(csv_path: str, team: str, question: str):
     # --- Grouped bar chart ---
     bar_fig = go.Figure()
     for model_name in MODELS:
-        iwfs = model_results.get(model_name, {})
+        iwfs = model_results.get(model_name, {}).get("iwfs", {})
         values = [iwfs.get(name, 0) or 0 for name in student_names]
         bar_fig.add_trace(go.Bar(
             name=model_name.capitalize(),
@@ -263,7 +302,8 @@ def update_dashboard(csv_path: str, team: str, question: str):
         xaxis_title="Student",
         yaxis_title="IWF",
         yaxis=dict(range=[0, max(
-            max((v or 0) for v in model_results.get(m, {}).values()) if model_results.get(m) else 10
+            max((v or 0) for v in model_results.get(m, {}).get("iwfs", {}).values())
+            if model_results.get(m, {}).get("iwfs") else 10
             for m in MODELS
         ) * 1.15]),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5),
@@ -276,7 +316,7 @@ def update_dashboard(csv_path: str, team: str, question: str):
     for name in student_names:
         row = {"Student": name}
         for model_name in MODELS:
-            iwfs = model_results.get(model_name, {})
+            iwfs = model_results.get(model_name, {}).get("iwfs", {})
             row[model_name.capitalize()] = iwfs.get(name)
         # Compute max deviation from 10 across models
         vals = [row[m.capitalize()] for m in MODELS if row.get(m.capitalize()) is not None]
@@ -289,6 +329,32 @@ def update_dashboard(csv_path: str, team: str, question: str):
                          "format": Format(precision=3, scheme=Scheme.fixed)})
     columns.append({"name": "Max Δ", "id": "Max Δ", "type": "numeric",
                      "format": Format(precision=2, scheme=Scheme.fixed)})
+
+    # Add convergence row for iterative models
+    convergence_row = {"Student": "⚙ Convergence"}
+    for model_name in MODELS:
+        mr = model_results.get(model_name, {}).get("result")
+        if mr and mr.iterations is not None:
+            convergence_row[model_name.capitalize()] = None  # numeric column; show in tooltip
+        else:
+            convergence_row[model_name.capitalize()] = None
+    convergence_row["Max Δ"] = None
+
+    # Build convergence info line
+    conv_parts = []
+    for model_name in MODELS:
+        mr = model_results.get(model_name, {}).get("result")
+        err = model_results.get(model_name, {}).get("error")
+        if err:
+            conv_parts.append(f"{model_name.capitalize()}: ERROR — {err}")
+        elif mr and mr.iterations is not None:
+            status = "✓" if mr.converged else "✗"
+            conv_parts.append(f"{model_name.capitalize()}: {mr.iterations} iters {status}")
+
+    convergence_info = html.P(
+        " · ".join(conv_parts) if conv_parts else "No iterative models ran.",
+        style={"color": "#888", "fontSize": "12px", "marginTop": "6px"},
+    ) if conv_parts else None
 
     # Build conditional styles for color coding
     style_conditions = []
@@ -344,7 +410,110 @@ def update_dashboard(csv_path: str, team: str, question: str):
         sort_by=[{"column_id": "Max Δ", "direction": "desc"}],
     )
 
-    return force_fig, bar_fig, table
+    results_section = html.Div([table, convergence_info] if convergence_info else [table])
+
+    # --- Rank reversal summary ---
+    baseline_result = model_results.get("baseline", {}).get("result")
+    reversal_rows = []
+
+    if baseline_result:
+        for adv_name in ADVANCED_MODELS:
+            adv_result = model_results.get(adv_name, {}).get("result")
+            if adv_result is None:
+                continue
+            summary = compute_rank_reversals(baseline_result, adv_result, delta_iwf=1.5)
+            for rev in summary.reversals:
+                reversal_rows.append({
+                    "Model": adv_name.capitalize(),
+                    "Student A (↑ baseline)": rev.student_a,
+                    "Student B (↓ baseline)": rev.student_b,
+                    "Baseline Gap": round(rev.baseline_diff, 2),
+                    "Advanced Gap": round(rev.advanced_diff, 2),
+                    "Magnitude": round(rev.magnitude, 2),
+                })
+
+    if reversal_rows:
+        rev_columns = [
+            {"name": c, "id": c, "type": "numeric" if c in ("Baseline Gap", "Advanced Gap", "Magnitude") else "text"}
+            for c in ["Model", "Student A (↑ baseline)", "Student B (↓ baseline)",
+                       "Baseline Gap", "Advanced Gap", "Magnitude"]
+        ]
+        reversal_section = dash_table.DataTable(
+            data=reversal_rows,
+            columns=rev_columns,
+            style_table={"overflowX": "auto"},
+            style_cell={"textAlign": "center", "padding": "6px", "fontSize": "13px",
+                         "fontFamily": "system-ui, sans-serif"},
+            style_header={"backgroundColor": "#f0f0f0", "fontWeight": "bold", "fontSize": "13px"},
+            style_data_conditional=[{
+                "if": {"column_id": "Advanced Gap"},
+                "backgroundColor": "rgba(215, 48, 39, 0.15)",
+            }],
+            sort_action="native",
+            sort_by=[{"column_id": "Magnitude", "direction": "desc"}],
+        )
+    else:
+        reversal_section = html.P(
+            "No rank reversals detected (δ = 1.5 IWF points).",
+            style={"color": "#888", "fontSize": "13px"},
+        )
+
+    # Store figures for export callbacks
+    _figure_cache["force"] = force_fig
+    _figure_cache["bar"] = bar_fig
+
+    return force_fig, bar_fig, results_section, reversal_section
+
+
+# ---------------------------------------------------------------------------
+# Figure cache for export
+# ---------------------------------------------------------------------------
+
+_figure_cache: dict[str, go.Figure] = {}
+
+
+# ---------------------------------------------------------------------------
+# Export callbacks
+# ---------------------------------------------------------------------------
+
+@app.callback(
+    Output("download-html", "data"),
+    Output("export-status", "children"),
+    Input("export-bar-btn", "n_clicks"),
+    Input("export-force-btn", "n_clicks"),
+    Input("export-full-btn", "n_clicks"),
+    prevent_initial_call=True,
+)
+def export_html(bar_clicks, force_clicks, full_clicks):
+    """Export chart(s) as standalone HTML file."""
+    import io
+    from dash import ctx
+
+    triggered = ctx.triggered_id
+    if not triggered:
+        return dash.no_update, dash.no_update
+
+    if triggered == "export-bar-btn" and "bar" in _figure_cache:
+        content = _figure_cache["bar"].to_html(full_html=True, include_plotlyjs=True)
+        return dict(content=content, filename="bar_chart.html"), "✓ Bar chart exported"
+    elif triggered == "export-force-btn" and "force" in _figure_cache:
+        content = _figure_cache["force"].to_html(full_html=True, include_plotlyjs=True)
+        return dict(content=content, filename="force_graph.html"), "✓ Force graph exported"
+    elif triggered == "export-full-btn":
+        # Combine both charts into one HTML page
+        parts = ["<html><head><title>Peer Assessment Dashboard Export</title></head><body>"]
+        parts.append("<h1>Peer Assessment Dashboard</h1>")
+        if "bar" in _figure_cache:
+            parts.append("<h2>IWF Model Comparison</h2>")
+            parts.append(_figure_cache["bar"].to_html(full_html=False, include_plotlyjs="cdn"))
+        if "force" in _figure_cache:
+            parts.append("<h2>Force-Layout Graph</h2>")
+            parts.append(_figure_cache["force"].to_html(full_html=False, include_plotlyjs=False))
+        parts.append("</body></html>")
+        content = "\n".join(parts)
+        return dict(content=content, filename="dashboard_export.html"), "✓ Full dashboard exported"
+
+    return dash.no_update, "No chart data available — select a team first."
 
 
 # ---------------------------------------------------------------------------
