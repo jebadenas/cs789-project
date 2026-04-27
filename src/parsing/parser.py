@@ -13,6 +13,7 @@ from pathlib import Path
 
 import numpy as np
 
+from .diagnostics import DiagnosticCollector, DiagnosticEvent
 from .schemas import ScoreMatrix, StudentInfo
 
 logger = logging.getLogger(__name__)
@@ -73,6 +74,50 @@ def parse_session(
             result[(team_name, _label)] = sm
 
     return result
+
+
+def parse_session_with_diagnostics(
+    filepath: str | Path,
+) -> tuple[dict[tuple[str, str], ScoreMatrix], list]:
+    """Parse a CSV and return both ScoreMatrix objects and structured diagnostics.
+
+    Returns:
+        Tuple of (matrices dict, list of ParseDiagnostic).
+    """
+    filepath = Path(filepath)
+    collector = DiagnosticCollector()
+    lines = filepath.read_text(encoding="utf-8-sig").splitlines()
+
+    year, semester, session_number = _extract_session_metadata(lines)
+    question_blocks = _split_question_blocks(lines)
+
+    result: dict[tuple[str, str], ScoreMatrix] = {}
+
+    for q_text, block_lines in question_blocks:
+        if not _POINT_DIST_PATTERN.search(q_text):
+            continue
+
+        label = _derive_question_label(q_text)
+        summary_totals = _extract_summary_totals(block_lines)
+        directed_rows = _extract_directed_data(block_lines)
+
+        team_matrices = _build_matrices(
+            directed_rows=directed_rows,
+            summary_totals=summary_totals,
+            team_meta=dict(
+                question_label=label,
+                year=year,
+                semester=semester,
+                session_number=session_number,
+            ),
+            collector=collector,
+            csv_path=filepath,
+        )
+
+        for (team_name, _label), sm in team_matrices.items():
+            result[(team_name, _label)] = sm
+
+    return result, collector.diagnostics
 
 
 def _extract_session_metadata(lines: list[str]) -> tuple[str, str, int]:
@@ -217,6 +262,8 @@ def _build_matrices(
     directed_rows: list[tuple[str, str, str, str, str, float]],
     summary_totals: dict[str, float],
     team_meta: dict,
+    collector: DiagnosticCollector | None = None,
+    csv_path: Path | None = None,
 ) -> dict[tuple[str, str], ScoreMatrix]:
     """Group directed rows by team and construct ScoreMatrix objects."""
     # Group rows by team
@@ -230,7 +277,10 @@ def _build_matrices(
     label = team_meta["question_label"]
 
     for team_name, rows in teams.items():
-        sm = _build_team_matrix(team_name, rows, summary_totals, team_meta)
+        sm = _build_team_matrix(
+            team_name, rows, summary_totals, team_meta,
+            collector=collector, csv_path=csv_path,
+        )
         if sm is not None:
             result[(team_name, label)] = sm
 
@@ -242,6 +292,8 @@ def _build_team_matrix(
     rows: list[tuple[str, str, str, str, float]],
     summary_totals: dict[str, float],
     team_meta: dict,
+    collector: DiagnosticCollector | None = None,
+    csv_path: Path | None = None,
 ) -> ScoreMatrix | None:
     """Build a ScoreMatrix for a single team.
 
@@ -266,15 +318,25 @@ def _build_team_matrix(
         giver_scores.setdefault(giver_email, []).append(score)
 
     non_submitters: set[str] = set()
+    label = team_meta["question_label"]
     for email, scores in giver_scores.items():
         if all(np.isnan(s) for s in scores):
             non_submitters.add(email)
+            name = email_to_name.get(email, "?")
             logger.warning(
                 "Non-submitting rater %s (%s) in team '%s' — column will be NaN",
-                email_to_name.get(email, "?"),
-                email,
-                team_name,
+                name, email, team_name,
             )
+            if collector is not None:
+                collector.add(
+                    csv_path=csv_path or "",
+                    team_name=team_name,
+                    question_label=label,
+                    event=DiagnosticEvent.RATER_MISSING,
+                    detail=f"Non-submitting rater — column will be NaN",
+                    student_name=name,
+                    student_email=email,
+                )
 
     total_students = len(all_emails)
     n_missing = len(non_submitters)
@@ -283,10 +345,16 @@ def _build_team_matrix(
     if total_students > 0 and n_missing / total_students >= 0.5:
         logger.warning(
             "Dropping team '%s': %d/%d raters missing (≥50%%)",
-            team_name,
-            n_missing,
-            total_students,
+            team_name, n_missing, total_students,
         )
+        if collector is not None:
+            collector.add(
+                csv_path=csv_path or "",
+                team_name=team_name,
+                question_label=label,
+                event=DiagnosticEvent.TEAM_EXCLUDED,
+                detail=f"{n_missing}/{total_students} raters missing (≥50%)",
+            )
         return None
 
     # Build student list with ALL students, sorted by email
@@ -334,11 +402,18 @@ def _build_team_matrix(
             logger.warning(
                 "Point total mismatch for rater %s in team '%s': "
                 "expected ~%.0f (team median), got %.0f",
-                email,
-                team_name,
-                median_sum,
-                col_sums[idx],
+                email, team_name, median_sum, col_sums[idx],
             )
+            if collector is not None:
+                collector.add(
+                    csv_path=csv_path or "",
+                    team_name=team_name,
+                    question_label=label,
+                    event=DiagnosticEvent.POINT_TOTAL_MISMATCH,
+                    detail=f"Expected ~{median_sum:.0f} (median), got {col_sums[idx]:.0f}",
+                    student_email=email,
+                    student_name=email_to_name.get(email, ""),
+                )
 
     # Cross-check with summary stats (row sums, NaN-aware)
     for i, email in enumerate(all_sorted_emails):
@@ -349,11 +424,18 @@ def _build_team_matrix(
                 logger.warning(
                     "Summary cross-check mismatch for %s in team '%s': "
                     "matrix row sum=%.1f, summary Total Points=%.1f",
-                    email,
-                    team_name,
-                    row_sum,
-                    expected_total,
+                    email, team_name, row_sum, expected_total,
                 )
+                if collector is not None:
+                    collector.add(
+                        csv_path=csv_path or "",
+                        team_name=team_name,
+                        question_label=label,
+                        event=DiagnosticEvent.SUMMARY_CROSS_CHECK,
+                        detail=f"Row sum={row_sum:.1f}, summary Total Points={expected_total:.1f}",
+                        student_email=email,
+                        student_name=email_to_name.get(email, ""),
+                    )
 
     sm = ScoreMatrix(
         matrix=matrix,

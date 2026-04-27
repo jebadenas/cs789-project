@@ -17,11 +17,8 @@ from src.models.peerrank_exclude import peerrank_exclude
 from src.models.webpa import webpa
 from src.models.peerhits_impute import peerhits_impute
 from src.models.peerhits_exclude import peerhits_exclude
+from src.parsing.discovery import discover_csvs
 from src.parsing.parser import parse_session
-
-def discover_csvs(data_dir: Path) -> list[Path]:
-    """Return sorted list of CSV files found in data_dir."""
-    return sorted(data_dir.glob("*.csv"))
 
 
 MODELS = {
@@ -202,9 +199,81 @@ def _print_summary(
         print("".join(parts))
 
 
+def report(argv: list[str] | None = None) -> Path:
+    """Run all models across all CSVs and generate a data quality report.
+
+    Args:
+        argv: Argument list (defaults to sys.argv). Useful for testing.
+
+    Returns:
+        Path to the primary output file.
+    """
+    import json as json_mod
+
+    from src.batch_runner import run_full_dataset
+    from src.reporting.data_quality import build_report, render_json, render_markdown
+
+    parser = argparse.ArgumentParser(
+        prog="python3 -m src report",
+        description="Generate a data quality report across the full dataset.",
+    )
+    parser.add_argument(
+        "--data-dir", type=Path, default=Path("data"),
+        help="Directory containing CSV files (default: data/)",
+    )
+    parser.add_argument(
+        "--output", type=Path, default=Path("output"),
+        help="Output directory (default: output/)",
+    )
+    parser.add_argument(
+        "--format", choices=["markdown", "json", "both"], default="both",
+        dest="fmt",
+        help="Output format (default: both)",
+    )
+    parser.add_argument(
+        "--delta", type=float, default=1.5,
+        help="Rank reversal δ threshold in IWF points (default: 1.5)",
+    )
+
+    args = parser.parse_args(argv)
+    args.output.mkdir(parents=True, exist_ok=True)
+
+    print(f"Running full dataset from {args.data_dir}/...")
+    batch = run_full_dataset(args.data_dir, delta_iwf=args.delta)
+    dataset_report = build_report(batch, delta_iwf=args.delta)
+
+    paths: list[Path] = []
+
+    if args.fmt in ("markdown", "both"):
+        md_path = args.output / "data_quality_report.md"
+        md_path.write_text(render_markdown(dataset_report))
+        print(f"  Markdown report: {md_path}")
+        paths.append(md_path)
+
+    if args.fmt in ("json", "both"):
+        json_path = args.output / "data_quality_report.json"
+        json_path.write_text(json_mod.dumps(render_json(dataset_report), indent=2))
+        print(f"  JSON report: {json_path}")
+        paths.append(json_path)
+
+    return paths[0]
+
+
 def main() -> None:
     """Dispatch subcommands for `python3 -m src`."""
-    if len(sys.argv) < 2 or sys.argv[1] != "run":
-        print("Usage: python3 -m src run data/file.csv [--model MODEL] [--team TEAM] [--output PATH]")
+    if len(sys.argv) < 2:
+        print("Usage: python3 -m src <command>")
+        print("Commands:")
+        print("  run      Run models on a single CSV file")
+        print("  report   Generate data quality report across all CSVs")
         sys.exit(1)
-    run(sys.argv[2:])
+
+    command = sys.argv[1]
+    if command == "run":
+        run(sys.argv[2:])
+    elif command == "report":
+        report(sys.argv[2:])
+    else:
+        print(f"Unknown command: {command}")
+        print("Available commands: run, report")
+        sys.exit(1)
