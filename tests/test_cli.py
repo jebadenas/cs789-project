@@ -112,24 +112,24 @@ class TestCLIRun:
         assert len(df) > 0
 
     def test_model_flag_filters_to_named_model_only(self, tmp_path):
-        """Behaviour: --model peerrank produces only peerrank rows in the CSV."""
+        """Behaviour: --model peerrank-impute produces only peerrank-impute rows in the CSV."""
         from src.cli import run
 
         output = tmp_path / "out.csv"
-        run([str(CSV_2023), "--model", "peerrank", "--output", str(output)])
+        run([str(CSV_2023), "--model", "peerrank-impute", "--output", str(output)])
 
         df = pd.read_csv(output)
-        assert set(df["model"].unique()) == {"peerrank"}
+        assert set(df["model"].unique()) == {"peerrank-impute"}
 
     def test_multiple_model_flags_runs_only_those_models(self, tmp_path):
-        """Behaviour: --model baseline --model peerrank runs exactly those two."""
+        """Behaviour: --model baseline --model peerrank-impute runs exactly those two."""
         from src.cli import run
 
         output = tmp_path / "out.csv"
-        run([str(CSV_2023), "--model", "baseline", "--model", "peerrank", "--output", str(output)])
+        run([str(CSV_2023), "--model", "baseline", "--model", "peerrank-impute", "--output", str(output)])
 
         df = pd.read_csv(output)
-        assert set(df["model"].unique()) == {"baseline", "peerrank"}
+        assert set(df["model"].unique()) == {"baseline", "peerrank-impute"}
 
     def test_unknown_model_exits_with_error(self, tmp_path, capsys):
         """Behaviour: unknown --model name exits with SystemExit and lists valid models."""
