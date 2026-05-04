@@ -7,3 +7,5 @@ pydantic
 jupyter
 pandas
 pyarrow
+scipy
+umap-learn
