@@ -144,12 +144,18 @@ def _fit_aa_single(
         step = 2.0 / (t + 2)
         Z = C.T @ X  # (k, p)
 
+        if not np.isfinite(Z).all():
+            break
+
         # Update S — gradient: dL/dS = -2 * (X - S@Z) @ Z.T  shape (n, k)
         residuals = X - S @ Z
         grad_S = -2.0 * residuals @ Z.T
         S = _fw_rows(S, grad_S, step)
 
         Z = C.T @ X
+
+        if not np.isfinite(Z).all():
+            break
 
         # Update C — gradient: dL/dZ = -2 * S.T @ (X - S@Z)  shape (k, p)
         #            dL/dC = X @ dL_dZ.T  shape (n, k)
@@ -158,6 +164,7 @@ def _fit_aa_single(
         C = _fw_cols(C, grad_C, step)
 
     Z = C.T @ X
+    Z = np.where(np.isfinite(Z), Z, 0.0)
     rss = float(np.sum((X - S @ Z) ** 2))
     return Z, S, rss
 

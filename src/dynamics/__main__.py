@@ -4,7 +4,9 @@ Run:
     python3 -m src.dynamics
 
 Outputs to output/dynamics/:
-    feature_matrix.csv        — 25-dim feature vector per team-matrix + Δ
+    feature_matrix.csv        — 25-dim feature vector per team-matrix + Δ + dynamic_label
+    classifications.csv       — team label + Mahalanobis distances to all 5 archetypes
+    delta_by_label.csv        — Δ statistics (mean/std/median/max) per dynamic label
     pca_plot.html             — interactive PCA scatter coloured by Δ
     umap_plot.html            — interactive UMAP scatter coloured by Δ
     archetypes.json           — AA archetype vectors + RSS for each k
@@ -25,6 +27,13 @@ from sklearn.preprocessing import StandardScaler
 
 from src.batch_runner import run_full_dataset
 from src.dynamics.archetypes import ArchetypeResult, find_elbow, sweep_archetypes
+from src.dynamics.classifier import (
+    ARCHETYPE_LABELS,
+    build_synthesised_archetypes,
+    classify_teams,
+    delta_by_label,
+    fit_precision,
+)
 from src.dynamics.features import FEATURE_NAMES, TeamFeatures, extract_features
 from src.parsing.discovery import discover_csvs
 from src.parsing.parser import parse_session_with_diagnostics
@@ -75,23 +84,78 @@ def main() -> None:
     delta_vals = np.array([deltas.get(k, 0.0) for k in team_keys])
     labels = [f"{tf.team_name} | {tf.question_label}" for tf in features]
 
+    # --- Standardize for PCA / UMAP / AA / classification ---
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X_raw)
+
+    # Drop zero-variance features (e.g. assortativity is constant=0 in this dataset).
+    # These produce degenerate covariance and overflow in AA / Ledoit-Wolf.
+    nonzero_var_mask = scaler.var_ > 1e-10
+    X_scaled_nz = X_scaled[:, nonzero_var_mask]
+    n_dropped = int((~nonzero_var_mask).sum())
+    if n_dropped:
+        dropped = [FEATURE_NAMES[i] for i, keep in enumerate(nonzero_var_mask) if not keep]
+        print(f"  Dropped {n_dropped} zero-variance feature(s): {dropped}", flush=True)
+
+    # --- Synthesised-archetype Mahalanobis classification ---
+    print("Classifying teams via synthesised archetypes...", flush=True)
+    _, arch_raw = build_synthesised_archetypes()
+    arch_scaled_full = scaler.transform(arch_raw)
+    arch_scaled = arch_scaled_full[:, nonzero_var_mask]
+    precision = fit_precision(X_scaled_nz)
+    classifications = classify_teams(X_scaled_nz, arch_scaled, precision)
+    class_labels = [cr.label for cr in classifications]
+
+    # Classification CSV
+    dist_cols = {f"dist_{lbl.lower().replace('-', '_').replace(' ', '_')}": [cr.distances[i] for cr in classifications]
+                 for i, lbl in enumerate(ARCHETYPE_LABELS)}
+    weight_cols = {f"weight_{lbl.lower().replace('-', '_').replace(' ', '_')}": [cr.weights[i] for cr in classifications]
+                   for i, lbl in enumerate(ARCHETYPE_LABELS)}
+    df_cls = pd.DataFrame({
+        "csv_path": [tf.csv_path for tf in features],
+        "team_name": [tf.team_name for tf in features],
+        "question_label": [tf.question_label for tf in features],
+        "dynamic_label": class_labels,
+        "delta": delta_vals,
+        **dist_cols,
+        **weight_cols,
+    })
+    cls_path = OUTPUT_DIR / "classifications.csv"
+    df_cls.to_csv(cls_path, index=False)
+    print(f"  Saved {cls_path}", flush=True)
+
+    # Delta-by-label CSV
+    label_stats = delta_by_label(class_labels, delta_vals)
+    df_delta_label = pd.DataFrame([
+        {"label": lbl, **stats}
+        for lbl, stats in label_stats.items()
+    ])
+    delta_label_path = OUTPUT_DIR / "delta_by_label.csv"
+    df_delta_label.to_csv(delta_label_path, index=False)
+    print(f"  Saved {delta_label_path}", flush=True)
+
+    label_counts = {lbl: class_labels.count(lbl) for lbl in ARCHETYPE_LABELS}
+    print(f"  Label distribution: {label_counts}", flush=True)
+
+    for lbl, stats in label_stats.items():
+        if stats["count"] > 0:
+            print(f"    {lbl:15s}  n={stats['count']:3d}  Δ mean={stats['mean']:.3f}  median={stats['median']:.3f}", flush=True)
+
+    # Feature matrix with label appended
     df_feat = pd.DataFrame(X_raw, columns=FEATURE_NAMES)
     df_feat.insert(0, "question_label", [tf.question_label for tf in features])
     df_feat.insert(0, "team_name", [tf.team_name for tf in features])
     df_feat.insert(0, "csv_path", [tf.csv_path for tf in features])
     df_feat["delta"] = delta_vals
+    df_feat["dynamic_label"] = class_labels
     feat_path = OUTPUT_DIR / "feature_matrix.csv"
     df_feat.to_csv(feat_path, index=False)
     print(f"  Saved {feat_path}", flush=True)
 
-    # --- Standardize for PCA / UMAP / AA ---
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X_raw)
-
-    # --- PCA ---
+    # --- PCA (on non-zero-variance features) ---
     print("Running PCA...", flush=True)
     pca = PCA(n_components=2, random_state=42)
-    pca_coords = pca.fit_transform(X_scaled)
+    pca_coords = pca.fit_transform(X_scaled_nz)
     pca_var = pca.explained_variance_ratio_.tolist()
     print(f"  PC1: {pca_var[0]:.1%}, PC2: {pca_var[1]:.1%}", flush=True)
 
@@ -100,7 +164,7 @@ def main() -> None:
     try:
         import umap as umap_lib
         reducer = umap_lib.UMAP(n_components=2, random_state=42, n_neighbors=min(15, len(features) - 1), min_dist=0.1)
-        umap_coords = reducer.fit_transform(X_scaled)
+        umap_coords = reducer.fit_transform(X_scaled_nz)
     except ImportError:
         print("  umap-learn not installed — skipping UMAP (pip install umap-learn)", file=sys.stderr)
         umap_coords = None
@@ -108,7 +172,7 @@ def main() -> None:
 
     # --- Archetypal Analysis sweep k=2..8 ---
     print("Fitting archetypes (k=2..8, with bootstrap stability)...", flush=True)
-    arch_results = sweep_archetypes(X_scaled, k_range=range(2, 9), n_bootstrap=50)
+    arch_results = sweep_archetypes(X_scaled_nz, k_range=range(2, 9), n_bootstrap=50)
     best_k = find_elbow(arch_results)
     best_arch = next(r for r in arch_results if r.k == best_k)
     print(f"  RSS elbow: best k={best_k}", flush=True)
@@ -162,6 +226,8 @@ def main() -> None:
     print(f"  Saved {rss_path}", flush=True)
 
     print(f"\nDone. Best k={best_k}. Outputs in {OUTPUT_DIR}/", flush=True)
+    print(f"  classifications.csv  — {len(features)} teams labelled", flush=True)
+    print(f"  delta_by_label.csv   — Δ stratified by dynamic label", flush=True)
 
 
 def _compute_team_delta(batch) -> dict[tuple, float]:
