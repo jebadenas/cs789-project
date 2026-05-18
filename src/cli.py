@@ -259,6 +259,105 @@ def report(argv: list[str] | None = None) -> Path:
     return paths[0]
 
 
+def attack(argv: list[str] | None = None) -> Path:
+    """Run synthetic attack simulation and export robustness charts.
+
+    Applies the four attack vectors across all six models on real
+    matrices and/or synthetic teams, then writes robustness charts and a
+    summary CSV.
+
+    Returns:
+        Path to the output directory.
+    """
+    from src.attacks.runner import run_attacks
+    from src.attacks.synthetic import generate_cohort
+    from src.visualization.attack_robustness import export_charts
+
+    parser = argparse.ArgumentParser(
+        prog="python3 -m src attack",
+        description="Synthetic attack simulation (RQ1/RQ2).",
+    )
+    parser.add_argument(
+        "--data-dir", type=Path, default=Path("data"),
+        help="Directory of CSVs for real-matrix attacks (default: data/)",
+    )
+    parser.add_argument(
+        "--no-real", action="store_true",
+        help="Skip real matrices; synthetic only.",
+    )
+    parser.add_argument(
+        "--no-synthetic", action="store_true",
+        help="Skip synthetic teams; real only.",
+    )
+    parser.add_argument(
+        "--teams-per-size", type=int, default=10,
+        help="Synthetic teams per size (N=4,5,6) (default: 10)",
+    )
+    parser.add_argument(
+        "--profile", default="reliable",
+        help="Synthetic generator profile (default: reliable)",
+    )
+    parser.add_argument(
+        "--perms", type=int, default=100,
+        help="Single-outlier Monte-Carlo permutations (default: 100)",
+    )
+    parser.add_argument(
+        "--seed", type=int, default=0,
+        help="Monte-Carlo / generator seed (default: 0)",
+    )
+    parser.add_argument(
+        "--model", action="append", dest="models", metavar="MODEL",
+        help="Model to run (repeatable). Omit to run all 6.",
+    )
+    parser.add_argument(
+        "--output", type=Path, default=Path("output/attacks"),
+        help="Output directory (default: output/attacks/)",
+    )
+
+    args = parser.parse_args(argv)
+    args.output.mkdir(parents=True, exist_ok=True)
+
+    synthetic = None
+    if not args.no_synthetic:
+        print(f"Generating synthetic cohort "
+              f"({args.teams_per_size}/size, profile={args.profile})...")
+        synthetic = generate_cohort(
+            teams_per_size=args.teams_per_size,
+            base_seed=args.seed,
+            profile=args.profile,
+        )
+
+    print("Running attacks...")
+    batch = run_attacks(
+        real_dir=None if args.no_real else args.data_dir,
+        synthetic=synthetic,
+        model_names=args.models,
+        n_perms=args.perms,
+        seed=args.seed,
+    )
+
+    paths = export_charts(batch, args.output)
+    for p in paths:
+        print(f"  Chart: {p}")
+
+    summary_path = args.output / "attack_summary.csv"
+    with open(summary_path, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(
+            ["source", "attack", "model", "mean_delta", "n", "mc_std"]
+        )
+        for source in ("real", "synthetic"):
+            for (atk, mdl), v in sorted(batch.aggregate(source=source).items()):
+                writer.writerow([
+                    source, atk, mdl,
+                    round(v["mean_delta"], 4), v["n"],
+                    round(v["mc_std"], 4) if v["mc_std"] is not None else "",
+                ])
+    print(f"  Summary CSV: {summary_path}")
+
+    return args.output
+
+
 def main() -> None:
     """Dispatch subcommands for `python3 -m src`."""
     if len(sys.argv) < 2:
@@ -266,6 +365,7 @@ def main() -> None:
         print("Commands:")
         print("  run      Run models on a single CSV file")
         print("  report   Generate data quality report across all CSVs")
+        print("  attack   Run synthetic attack simulation (RQ1/RQ2)")
         sys.exit(1)
 
     command = sys.argv[1]
@@ -273,7 +373,9 @@ def main() -> None:
         run(sys.argv[2:])
     elif command == "report":
         report(sys.argv[2:])
+    elif command == "attack":
+        attack(sys.argv[2:])
     else:
         print(f"Unknown command: {command}")
-        print("Available commands: run, report")
+        print("Available commands: run, report, attack")
         sys.exit(1)
