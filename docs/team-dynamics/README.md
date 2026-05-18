@@ -20,6 +20,12 @@ Score Matrix  →  Feature Extraction  →  Standardisation  →  Mahalanobis Cl
 | [step-5-mahalanobis.md](step-5-mahalanobis.md) | Mahalanobis distance, the precision matrix, and classification |
 | [step-6-archetypal-analysis.md](step-6-archetypal-analysis.md) | Optional: data-driven archetype discovery via Frank-Wolfe AA |
 
+## Output Files
+
+| File | Contents |
+|---|---|
+| [output-guide.md](output-guide.md) | Plain-English explanation of every file in `output/dynamics/` — what each column means, how to read it, what to cite |
+
 ## Findings & Decision Records
 
 | File | Contents |
