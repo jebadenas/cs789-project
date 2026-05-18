@@ -54,11 +54,12 @@ src/
   parsing/      # CSV parser and ScoreMatrix schemas
   attacks/      # Synthetic attack simulator (planned)
   evaluation/   # Metrics: rank reversal, attack delta (planned)
+  dynamics/     # Team-dynamics classification pipeline (RQ3)
   qualitative/  # Sentiment pipeline (planned)
-  visualization/ # Dash dashboard and force-layout graph
+  visualization/ # Dash dashboard, force-layout graph, archetype map
   cli.py        # CLI entry point
 data/           # Place CSV files here (gitignored)
-output/         # Generated CSV results (gitignored)
+output/         # Generated results (gitignored)
 tests/          # Pytest test suite
 docs/           # Research docs, diary, meeting notes
 ```
@@ -77,3 +78,32 @@ Interactive model comparison dashboard with force-layout graph:
 python3 -m src.visualization.app
 # Open http://127.0.0.1:8050
 ```
+
+## Team-dynamics classification (RQ3)
+
+Classifies each team's peer-rating matrix into latent team-dynamic archetypes using a 25-dimensional feature vector and Archetypal Analysis (Cutler & Breiman 1994).
+
+**Feature vector (25 dims per team-matrix):**
+- 9 behavioural metrics on the weighted directed graph: reciprocity, Gini (in-degree), mean/std rater variance, asymmetry, clustering coefficient, assortativity, non-submitter fraction, mean self-share
+- 16 directed triad-census proportions (Holland & Leinhardt 1976), computed on the rater-mean-binarized graph
+
+**Pipeline:**
+1. Featurize all 136 score matrices → standardize
+2. PCA (2-D, interpretable axes) + UMAP (2-D, non-linear structure)
+3. Archetypal Analysis sweep k=2–8: RSS elbow + bootstrap stability to select k
+4. Colour scatter plots by Δ (mean cross-model IWF disagreement) — tests whether archetypes predict model instability
+
+**Run:**
+```bash
+pip install umap-learn  # one-time
+python3 -m src.dynamics
+# Outputs to output/dynamics/:
+#   feature_matrix.csv       — 25-dim vectors + Δ per team
+#   pca_plot.html            — interactive PCA scatter
+#   umap_plot.html           — interactive UMAP scatter
+#   rss_plot.html            — archetype count selection chart
+#   archetypes.json          — archetype vectors + RSS per k
+#   archetype_stability.csv  — bootstrap stability per k
+```
+
+**Research background:** `docs/team-dynamics-similarity-research.md`
