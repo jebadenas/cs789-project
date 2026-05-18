@@ -2,6 +2,80 @@
 
 > Source PRD: Badenas_Jos_421180443_Research_Proposal.pdf — "Optimising Peer-Assessment Reliability in Capstone Software Projects through Algorithmic Weighting and Qualitative Red-Flagging"
 
+---
+
+## Status & forward roadmap — 2026-05-18
+
+### Phase completion
+
+| Phase | Description | Status |
+|---|---|---|
+| Phase 1 | CSV parser + baseline model (one team) | ✅ Done |
+| Phase 2 | All four models, single team | ✅ Done |
+| Phase 3 | Full dataset ingestion + data quality report | ✅ Done |
+| Phase 4 | Synthetic attack simulation | ❌ Not started — `src/attacks/` empty |
+| Phase 5 | Delta-Analysis & Red-Flag Dashboard (RQ3) | ⚠️ Pivoted — see below |
+| Phase 6 | Qualitative Sentiment Pipeline (RQ4) | ❌ Not started — `src/qualitative/` empty |
+| Phase 7 | Validation tests & final evaluation | ⚠️ Partial — 237 tests passing, but attack/qualitative untested |
+
+Additionally implemented (not in original phases): PeerRank-Impute/Exclude, PeerHITS-Impute/Exclude variants (Issue #5/#6), rank reversal metric (Issue #7), team-dynamics atypicality pipeline (Issue #11, RQ3 work), force-layout + Dash dashboard.
+
+### RQ status
+
+| RQ | Proposal intent | Current state |
+|---|---|---|
+| **RQ1 — Manipulation resistance** | 4 models vs baseline under uniform-inflation + zero-self, real data + synthetic attacks | Models ✅. Attack simulation ❌. Non-submitter amplification finding already documented (strong preliminary result). |
+| **RQ2 — Convergence stability** | PeerRank sensitivity to single outlier raters (Monte Carlo) | Convergence metadata ✅. Perturbation experiment ❌ (depends on `attacks/`). |
+| **RQ3 — Δ as collusion detector** | Δ vs Git Gini / verified free-riding | Pivoted: atypicality↔Δ result ✅ (r=0.37, p=0.02, n=39 clean). Git validation ❌ (no Git data). Data-quality finding co-headline (35 teams → 18 usable → 6 complete). |
+| **RQ4 — Journal sentiment** | Sentiment-IWF divergence catches involuntary non-contribution | ❌ Not started. No journal data. |
+
+### Forward plan (rest of research, ~5–6 weeks)
+
+**Principle:** build what needs no data first; leave clean interfaces for data that may arrive.
+
+#### Track 1 — Attack simulation (RQ1 + RQ2) — *immediate priority*
+
+Implement `src/attacks/` per Phase 4 spec. No external data required.
+
+- Four attack transforms: uniform inflation, zero-self (full + partial collusion), targeted down-vote, single outlier (Monte Carlo, 100 perms)
+- Synthetic team generator: controlled N×N matrices for N=4,5,6 with known ground-truth contribution vectors — lean on these because real n is thin (18 usable teams)
+- Attack Delta metric + RQ2 convergence tracking under single-outlier
+- Apply to both clean real matrices and synthetic teams; robustness bar charts with MC error bars
+- Fold in non-submitter amplification as a fifth documented vulnerability ("strategic non-submission")
+- Closes Issues #9 and #10
+
+#### Track 2 — Reframe RQ3/RQ4 with Anna (parallel, ~half day prep)
+
+Raise at next supervisor meeting:
+- **RQ3:** present atypicality↔Δ + data-quality finding as the contribution. Frame claim as "internal-consistency signal," not free-riding detection. Git validation conditional on data arrival.
+- **RQ4:** either preliminary prototype on CSV confidential-comment columns, or documented limitation — get Anna's decision.
+- Surface the data question directly: are more CSVs, Git logs, or journals realistically obtainable? What's the path?
+- Agree to formally narrow scope where data doesn't exist; adjust dissertation framing accordingly.
+
+#### Track 3 — Conditional on data arrival (only if/when it lands)
+
+| Data | Unlock |
+|---|---|
+| More peer-score CSVs | Re-run all pipelines; lifts n for every RQ |
+| Git metrics | Implement stubbed `git_alignment()` and Δ-vs-Gini correlation (proper proposal-RQ3) |
+| Journals | `JournalAdapter` behind Layer-1 interface; Layers 2–3 (VADER + classifier) unchanged |
+
+Keep interfaces defined (Git Alignment stub, `JournalAdapter` spec) so data slots in without rework.
+
+#### Track 4 — Writing (start in parallel with Track 1)
+
+Dissertation-ready now: model implementations + theory, data-quality finding, non-submitter amplification, RQ3 pivot narrative. Start drafting these chapters while Track 1 runs.
+
+#### Approximate sequencing
+
+| Period | Focus |
+|---|---|
+| Now → +2 weeks | Track 1: build attacks, Track 2: reframe note for Anna |
+| +2 → +4 weeks | Track 1: analysis/charts, Track 4: draft RQ1/RQ2 + methods/data chapters |
+| +4 → end | Track 3 (if data arrived), finalise writing |
+
+---
+
 ## Architectural decisions
 
 Durable decisions that apply across all phases:
