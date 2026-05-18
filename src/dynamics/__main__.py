@@ -29,8 +29,12 @@ from src.batch_runner import run_full_dataset
 from src.dynamics.archetypes import ArchetypeResult, find_elbow, sweep_archetypes
 from src.dynamics.classifier import (
     ARCHETYPE_LABELS,
+    atypicality_delta_correlation,
+    atypicality_scores,
     build_synthesised_archetypes,
+    chi_square_flag,
     classify_teams,
+    degenerate_cause,
     delta_by_label,
     fit_precision,
 )
@@ -66,6 +70,12 @@ def main() -> None:
                 print(f"  Warning: {team_name} ({question_label}): {exc}", file=sys.stderr)
 
     print(f"  {len(features)} team-matrices featurized", flush=True)
+
+    degen_cause = [degenerate_cause(tf) for tf in features]
+    degenerate = np.array([c != "none" for c in degen_cause])
+    cause_counts = {c: degen_cause.count(c) for c in ("non_submitter", "flat", "both")}
+    print(f"  {int(degenerate.sum())}/{len(features)} flagged degenerate "
+          f"(no usable signal) — {cause_counts}", flush=True)
 
     if len(features) < 4:
         print("Too few matrices for analysis. Place CSV files in data/ and retry.", file=sys.stderr)
@@ -106,6 +116,36 @@ def main() -> None:
     classifications = classify_teams(X_scaled_nz, arch_scaled, precision)
     class_labels = [cr.label for cr in classifications]
 
+    # --- PRIMARY: continuous atypicality score (RQ3) ---
+    print("Scoring team atypicality (Mahalanobis from data centroid)...", flush=True)
+    clean = ~degenerate
+    centroid = X_scaled_nz[clean].mean(axis=0)
+    atyp_dist, atyp_dist2 = atypicality_scores(X_scaled_nz, precision, centroid=centroid)
+
+    df = int(X_scaled_nz.shape[1])
+    atyp_flag, chi2_cutoff = chi_square_flag(atyp_dist2, df=df, alpha=0.05)
+
+    corr_full = atypicality_delta_correlation(atyp_dist, delta_vals)
+    corr_clean = atypicality_delta_correlation(atyp_dist[clean], delta_vals[clean])
+
+    print(f"  atypicality–Δ correlation  full : r={corr_full['r']:+.3f} "
+          f"p={corr_full['p']:.4f} n={corr_full['n']}", flush=True)
+    print(f"  atypicality–Δ correlation  clean: r={corr_clean['r']:+.3f} "
+          f"p={corr_clean['p']:.4f} n={corr_clean['n']}", flush=True)
+    print(f"  χ² cutoff (df={df}, α=0.05) = {chi2_cutoff:.2f} → "
+          f"{int((atyp_flag == 'Anomalous').sum())} Anomalous, "
+          f"{int((atyp_flag == 'Typical').sum())} Typical", flush=True)
+
+    atyp_summary = pd.DataFrame([
+        {"subset": "full",  "n": corr_full["n"],  "pearson_r": corr_full["r"],
+         "p_value": corr_full["p"],  "degenerate_excluded": False},
+        {"subset": "clean", "n": corr_clean["n"], "pearson_r": corr_clean["r"],
+         "p_value": corr_clean["p"], "degenerate_excluded": True},
+    ])
+    atyp_summary_path = OUTPUT_DIR / "atypicality_summary.csv"
+    atyp_summary.to_csv(atyp_summary_path, index=False)
+    print(f"  Saved {atyp_summary_path}", flush=True)
+
     # Classification CSV
     dist_cols = {f"dist_{lbl.lower().replace('-', '_').replace(' ', '_')}": [cr.distances[i] for cr in classifications]
                  for i, lbl in enumerate(ARCHETYPE_LABELS)}
@@ -115,8 +155,14 @@ def main() -> None:
         "csv_path": [tf.csv_path for tf in features],
         "team_name": [tf.team_name for tf in features],
         "question_label": [tf.question_label for tf in features],
-        "dynamic_label": class_labels,
         "delta": delta_vals,
+        # PRIMARY: continuous atypicality + principled binary flag
+        "atypicality": atyp_dist,
+        "atypicality_flag": atyp_flag,
+        "degenerate": degenerate,
+        "degenerate_cause": degen_cause,
+        # SECONDARY (descriptive only): demoted 5-prototype nearest-label
+        "dynamic_label": class_labels,
         **dist_cols,
         **weight_cols,
     })
@@ -225,9 +271,14 @@ def main() -> None:
     rss_fig.write_html(str(rss_path))
     print(f"  Saved {rss_path}", flush=True)
 
-    print(f"\nDone. Best k={best_k}. Outputs in {OUTPUT_DIR}/", flush=True)
-    print(f"  classifications.csv  — {len(features)} teams labelled", flush=True)
-    print(f"  delta_by_label.csv   — Δ stratified by dynamic label", flush=True)
+    print(f"\nDone. Outputs in {OUTPUT_DIR}/", flush=True)
+    print(f"  PRIMARY  atypicality_summary.csv — atypicality–Δ r="
+          f"{corr_clean['r']:+.3f} (clean, n={corr_clean['n']})", flush=True)
+    print(f"           classifications.csv     — per-team atypicality + flags", flush=True)
+    print(f"  context  AA stability: k=2 is the only robust split "
+          f"(see archetype_stability.csv)", flush=True)
+    print(f"  SECONDARY delta_by_label.csv     — demoted 5-prototype, "
+          f"descriptive only", flush=True)
 
 
 def _compute_team_delta(batch) -> dict[tuple, float]:

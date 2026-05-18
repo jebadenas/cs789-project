@@ -17,9 +17,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import numpy as np
+from scipy.stats import chi2, pearsonr
 from sklearn.covariance import LedoitWolf
 
-from src.dynamics.features import extract_features
+from src.dynamics.features import FEATURE_NAMES, TeamFeatures, extract_features
 from src.parsing.schemas import ScoreMatrix, StudentInfo
 
 
@@ -181,6 +182,104 @@ def fit_precision(X: np.ndarray) -> np.ndarray:
         precision: (n_features, n_features) precision matrix (inverse covariance).
     """
     return LedoitWolf().fit(X).precision_
+
+
+def atypicality_scores(
+    X: np.ndarray,
+    precision: np.ndarray,
+    centroid: np.ndarray | None = None,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Mahalanobis distance of every team from the data centroid.
+
+    This is the primary RQ3 measure: a single continuous "how unusual is this
+    team vs the crowd" score, replacing the 5-prototype nearest-label scheme.
+
+    Args:
+        X: (n_teams, n_features) standardised feature matrix.
+        precision: (n_features, n_features) Ledoit-Wolf precision matrix.
+        centroid: optional (n_features,) reference point. Defaults to the
+            column mean of X (the centre of the blob).
+
+    Returns:
+        dist:  (n_teams,) Mahalanobis distance from the centroid.
+        dist2: (n_teams,) squared distance — distributed ~ chi2(n_features)
+               under the null that the team is a typical draw.
+    """
+    if centroid is None:
+        centroid = X.mean(axis=0)
+
+    L = np.linalg.cholesky(precision)  # precision = L @ L.T
+    dist = np.array([_mahalanobis(row, centroid, L) for row in X])
+    return dist, dist ** 2
+
+
+def chi_square_flag(
+    dist2: np.ndarray,
+    df: int,
+    alpha: float = 0.05,
+) -> tuple[np.ndarray, float]:
+    """Secondary binary Typical/Anomalous flag from a chi-square cutoff.
+
+    Squared Mahalanobis distance from the centroid follows chi2(df) when the
+    team is a typical draw, so the (1-alpha) quantile is a principled "too far"
+    line — no hand-picked threshold.
+
+    Args:
+        dist2: (n_teams,) squared Mahalanobis distances.
+        df: degrees of freedom = number of features used.
+        alpha: tail mass treated as anomalous (0.05 -> 95th percentile cut).
+
+    Returns:
+        labels: (n_teams,) array of "Typical" / "Anomalous".
+        cutoff: the chi2 critical value used.
+    """
+    cutoff = float(chi2.ppf(1.0 - alpha, df))
+    labels = np.where(dist2 > cutoff, "Anomalous", "Typical")
+    return labels, cutoff
+
+
+def degenerate_cause(tf: TeamFeatures) -> str:
+    """Why a team carries no usable signal: none / non_submitter / flat / both.
+
+    Two independent no-signal causes, kept distinguishable for the writeup:
+      - non_submitter: a teammate left their column blank (partial data).
+      - flat: zero rater variation — everyone split points evenly, so the
+        binarised graph has no above-average edges (structureless).
+
+    Both look "perfectly cohesive" but are actually blank; reported separately
+    so the data-quality story can split participation vs. engagement failures.
+    """
+    has_non_sub = tf.non_submitter_count > 0
+    mean_rater_std = float(tf.values[FEATURE_NAMES.index("mean_rater_std")])
+    is_flat = mean_rater_std < 1e-9
+
+    if has_non_sub and is_flat:
+        return "both"
+    if has_non_sub:
+        return "non_submitter"
+    if is_flat:
+        return "flat"
+    return "none"
+
+
+def is_degenerate(tf: TeamFeatures) -> bool:
+    """True if a team carries no usable peer-rating signal (any cause)."""
+    return degenerate_cause(tf) != "none"
+
+
+def atypicality_delta_correlation(
+    scores: np.ndarray,
+    deltas: np.ndarray,
+) -> dict[str, float]:
+    """Pearson correlation between atypicality and cross-model Δ (the RQ3 test).
+
+    Returns r, two-sided p-value, and n. Caller runs this twice: once on the
+    full set and once on the degenerate-excluded subset.
+    """
+    if scores.size < 3:
+        return {"r": float("nan"), "p": float("nan"), "n": int(scores.size)}
+    r, p = pearsonr(scores, deltas)
+    return {"r": float(r), "p": float(p), "n": int(scores.size)}
 
 
 def classify_teams(
