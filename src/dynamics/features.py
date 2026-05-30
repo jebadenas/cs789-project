@@ -29,6 +29,10 @@ BEHAVIORAL_FEATURE_NAMES: list[str] = [
     "std_rater_std",
     "asymmetry",
     "clustering",
+    # assortativity: RETAINED (decision 2026-05-30). The 2026-05-12 note to drop
+    # it assumed it was identically zero on the 2-session subset; on the full
+    # 5-session dataset it varies (range ~[-0.25, 0]), so it carries signal.
+    # Feature df therefore stays 25, not 24.
     "assortativity",
     "non_submitter_frac",
     "mean_self_share",
