@@ -3,6 +3,10 @@
 **Date:** 2026-05-19
 **Topics:** RQ3 pivot, new results, data-quality finding, more data
 
+> **Read `agenda-2026-05-19.md` first** — that is the simple, in-order,
+> read-aloud version. This file is the detailed backup: deeper
+> explanations and answers to likely follow-up questions.
+
 ---
 
 ## What to Actually Say — Script
@@ -146,13 +150,51 @@ _If she asks about the full-set correlation (r=0.51):_
 
 ### Closing ask (1 min)
 
-> "Three things I'd like your input on:
+> "Four things I'd like your input on:
 > 1. Does the pivot from 5-label classification to continuous
 >    atypicality scoring make sense to you methodologically?
 > 2. Is there more data I can access?
 > 3. How do you want me to handle the non-independence issue —
 >    each team appears up to 3 times (once per question). Should
->    I aggregate to per-team, or is per-question fine with a caveat?"
+>    I aggregate to per-team, or is per-question fine with a caveat?
+> 4. I want to add two attack vectors beyond the four in the
+>    proposal — is that scope extension OK? (Detail below.)"
+
+---
+
+## Attack scope extension (sign-off ask)
+
+> "Proposal §3.4 specifies four synthetic attacks. I want to run six.
+> Two are extensions beyond the proposal — both research-backed:"
+
+> "**#5 Strategic non-submission.** Not in the proposal — it's my own
+> empirical finding. Iterative models (PeerRank/PeerHITS) *inflate* a
+> non-submitter above students who did participate. Already documented
+> (April diary entry). It's a genuine vulnerability, so I want it in the
+> attack suite as a fifth vector."
+
+> "**#6 Competitive sabotage.** A colluder deflates the *strongest*
+> contributor to lift their own relative IWF. Distinct from the
+> proposal's targeted down-vote — that one models social exclusion of a
+> low-status member (Hall & Buzwell); this one is self-interested and
+> targets the top contributor. Backed by the strategyproof-peer-grading
+> literature (Catch Me if I Can; TSP; Dollar Partition). It needs one
+> new citation."
+
+> "I also checked a third candidate — reciprocal log-rolling — and
+> *rejected* it: Song & Gehringer's own taxonomy classes it as
+> small-circle collusion, which my zero-self partial-collusion variant
+> already covers. I didn't want to pad the suite."
+
+_The ask:_
+> "Are you OK with six attacks instead of four, given #5 and #6 are
+> evidence-based and #6 brings one new reference? Or would you rather I
+> stay strictly within the proposal's four?"
+
+_If she wants to minimise scope:_
+> "Then #5 and #6 become a documented 'further vulnerabilities'
+> subsection rather than full experimental vectors — the core four
+> still answer RQ1/RQ2 as proposed."
 
 ---
 
