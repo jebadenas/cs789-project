@@ -2,6 +2,7 @@ polars
 scikit-learn
 networkx
 plotly
+dash
 ipykernel
 pydantic
 jupyter
