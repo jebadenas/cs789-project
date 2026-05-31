@@ -4,7 +4,7 @@ Run:
     python3 -m src.dynamics
 
 Outputs to output/dynamics/:
-    feature_matrix.csv        — 25-dim feature vector per team-matrix + Δ + dynamic_label
+    feature_matrix.csv        — 24-dim feature vector per team-matrix + Δ + dynamic_label
     classifications.csv       — team label + Mahalanobis distances to all 5 archetypes
     delta_by_label.csv        — Δ statistics (mean/std/median/max) per dynamic label
     pca_plot.html             — interactive PCA scatter coloured by Δ
@@ -99,8 +99,8 @@ def main() -> None:
     X_scaled = scaler.fit_transform(X_raw)
 
     # Guard against zero-variance features (degenerate covariance / overflow in
-    # AA / Ledoit-Wolf). On the full 5-session dataset nothing is dropped — all 25
-    # features vary, including assortativity (df stays 25; see features.py note).
+    # AA / Ledoit-Wolf). On the full 5-session dataset nothing is dropped — all 24
+    # features vary (assortativity was removed entirely; see features.py note, df=24).
     nonzero_var_mask = scaler.var_ > 1e-10
     X_scaled_nz = X_scaled[:, nonzero_var_mask]
     n_dropped = int((~nonzero_var_mask).sum())

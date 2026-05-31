@@ -185,8 +185,9 @@ def cmd_a(b: Bundle, n_nulls: int = 30, n_bootstrap: int = 50) -> None:
     print(f"\nk=4 load counts: {load_counts}")
     print("k=4 pairwise archetype distance (standardised):")
     print(np.round(pdist, 2))
-    key = ["non_submitter_frac", "mean_self_share", "mean_rater_std",
-           "gini_in_degree", "reciprocity", "assortativity"]
+    key = [n for n in ["non_submitter_frac", "mean_self_share", "mean_rater_std",
+                       "gini_in_degree", "reciprocity", "assortativity"]
+           if n in FEATURE_NAMES]
     print("\nk=4 archetypes (raw scale, selected features):")
     print(arch_df[["archetype", "load_count"] + key].to_string(index=False))
 
@@ -197,7 +198,7 @@ def cmd_a(b: Bundle, n_nulls: int = 30, n_bootstrap: int = 50) -> None:
 
 
 def _unmask(Z_nz, scaler, feat_names):
-    """Pad zero-var-dropped archetypes back to full 25-dim for inverse_transform."""
+    """Pad zero-var-dropped archetypes back to full feature dim for inverse_transform."""
     full = np.zeros((Z_nz.shape[0], len(FEATURE_NAMES)))
     idx = [FEATURE_NAMES.index(n) for n in feat_names]
     full[:, idx] = Z_nz
@@ -396,6 +397,10 @@ def _partial_correlation(x, y, Z):
 def cmd_d(b: Bundle) -> None:
     from sklearn.covariance import LedoitWolf
 
+    if "assortativity" not in FEATURE_NAMES:
+        print("assortativity has been dropped from the feature set — "
+              "task D (its conditioning check) is no longer applicable.")
+        return
     j_as = FEATURE_NAMES.index("assortativity")
     raw_as = b.X_raw[:, j_as]
     print(f"assortativity (raw): var={raw_as.var():.5f} "

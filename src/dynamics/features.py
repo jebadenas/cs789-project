@@ -29,11 +29,11 @@ BEHAVIORAL_FEATURE_NAMES: list[str] = [
     "std_rater_std",
     "asymmetry",
     "clustering",
-    # assortativity: RETAINED (decision 2026-05-30). The 2026-05-12 note to drop
-    # it assumed it was identically zero on the 2-session subset; on the full
-    # 5-session dataset it varies (range ~[-0.25, 0]), so it carries signal.
-    # Feature df therefore stays 25, not 24.
-    "assortativity",
+    # assortativity: DROPPED (decision 2026-05-31, reversing the 2026-05-30 keep).
+    # On the full 5-session data it varies but only across 5 near-degenerate
+    # values (var≈6e-4); it was the rank-deficient dimension of the 25-feature
+    # covariance (rank 24/25, cond 1.6e16, invertible only via Ledoit-Wolf) and
+    # drove 6/64 Anomalous flags for a near-collinear reason. Feature df is 24.
     "non_submitter_frac",
     "mean_self_share",
 ]
@@ -58,7 +58,7 @@ def extract_features(
     csv_path: str = "",
     question_label: str = "",
 ) -> TeamFeatures:
-    """Extract the 25-dim feature vector from a ScoreMatrix."""
+    """Extract the 24-dim feature vector from a ScoreMatrix."""
     n = sm.matrix.shape[0]
     A = sm.matrix.T.copy().astype(float)  # A[giver][recipient]
 
@@ -75,11 +75,11 @@ def extract_features(
     gini = _gini(np.nanmean(A, axis=0))
     mean_std, std_std = _rater_variance(A)
     asymmetry = _asymmetry(A)
-    clustering, assortativity = _graph_metrics(A, n)
+    clustering, _assortativity = _graph_metrics(A, n)  # assortativity dropped (df=24)
 
     behavioral: list[float] = [
         reciprocity, gini, mean_std, std_std, asymmetry,
-        clustering, assortativity, non_submitter_frac, mean_self_share,
+        clustering, non_submitter_frac, mean_self_share,
     ]
 
     G_bin = binarize_rater_mean(A)
