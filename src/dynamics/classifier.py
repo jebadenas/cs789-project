@@ -2,7 +2,7 @@
 
 Builds hand-crafted prototype score matrices for each of the 5 team-dynamic
 labels (Cohesive, Collusive, Free-rider, Dominant, Conflict), extracts their
-25-dim feature vectors, then classifies real teams by Mahalanobis distance.
+24-dim feature vectors, then classifies real teams by Mahalanobis distance.
 
 Pipeline usage
 --------------

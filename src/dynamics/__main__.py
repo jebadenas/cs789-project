@@ -4,7 +4,7 @@ Run:
     python3 -m src.dynamics
 
 Outputs to output/dynamics/:
-    feature_matrix.csv        — 25-dim feature vector per team-matrix + Δ + dynamic_label
+    feature_matrix.csv        — 24-dim feature vector per team-matrix + Δ + dynamic_label
     classifications.csv       — team label + Mahalanobis distances to all 5 archetypes
     delta_by_label.csv        — Δ statistics (mean/std/median/max) per dynamic label
     pca_plot.html             — interactive PCA scatter coloured by Δ
@@ -98,8 +98,9 @@ def main() -> None:
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X_raw)
 
-    # Drop zero-variance features (e.g. assortativity is constant=0 in this dataset).
-    # These produce degenerate covariance and overflow in AA / Ledoit-Wolf.
+    # Guard against zero-variance features (degenerate covariance / overflow in
+    # AA / Ledoit-Wolf). On the full 5-session dataset nothing is dropped — all 24
+    # features vary (assortativity was removed entirely; see features.py note, df=24).
     nonzero_var_mask = scaler.var_ > 1e-10
     X_scaled_nz = X_scaled[:, nonzero_var_mask]
     n_dropped = int((~nonzero_var_mask).sum())
@@ -145,6 +146,41 @@ def main() -> None:
     atyp_summary_path = OUTPUT_DIR / "atypicality_summary.csv"
     atyp_summary.to_csv(atyp_summary_path, index=False)
     print(f"  Saved {atyp_summary_path}", flush=True)
+
+    # --- Anomalous-vs-Typical Δ group contrast (RQ3 secondary headline) ---
+    from scipy import stats as _stats
+
+    def _contrast(subset_name: str, flag: np.ndarray, delta: np.ndarray) -> dict:
+        anom = delta[flag == "Anomalous"]
+        typ = delta[flag == "Typical"]
+        t_stat = t_p = u_stat = u_p = float("nan")
+        if len(anom) > 1 and len(typ) > 1:
+            t_stat, t_p = _stats.ttest_ind(anom, typ, equal_var=False)
+            u_stat, u_p = _stats.mannwhitneyu(anom, typ, alternative="two-sided")
+        return {
+            "subset": subset_name,
+            "n_anomalous": len(anom), "n_typical": len(typ),
+            "delta_mean_anomalous": float(anom.mean()) if len(anom) else float("nan"),
+            "delta_median_anomalous": float(np.median(anom)) if len(anom) else float("nan"),
+            "delta_mean_typical": float(typ.mean()) if len(typ) else float("nan"),
+            "delta_median_typical": float(np.median(typ)) if len(typ) else float("nan"),
+            "welch_t": float(t_stat), "welch_p": float(t_p),
+            "mannwhitney_u": float(u_stat), "mannwhitney_p": float(u_p),
+        }
+
+    contrast_rows = [
+        _contrast("full", atyp_flag, delta_vals),
+        _contrast("clean", atyp_flag[clean], delta_vals[clean]),
+    ]
+    contrast_df = pd.DataFrame(contrast_rows)
+    contrast_path = OUTPUT_DIR / "atypicality_group_contrast.csv"
+    contrast_df.to_csv(contrast_path, index=False)
+    for r in contrast_rows:
+        print(f"  Δ contrast {r['subset']:5s}: Anomalous (n={r['n_anomalous']}) "
+              f"mean={r['delta_mean_anomalous']:.3f} vs Typical (n={r['n_typical']}) "
+              f"mean={r['delta_mean_typical']:.3f}  Welch p={r['welch_p']:.2e} "
+              f"MW p={r['mannwhitney_p']:.2e}", flush=True)
+    print(f"  Saved {contrast_path}", flush=True)
 
     # Classification CSV
     dist_cols = {f"dist_{lbl.lower().replace('-', '_').replace(' ', '_')}": [cr.distances[i] for cr in classifications]

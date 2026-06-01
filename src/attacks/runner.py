@@ -40,6 +40,22 @@ DETERMINISTIC_ATTACKS: dict[str, Callable[[ScoreMatrix], ScoreMatrix]] = {
 SINGLE_OUTLIER = "single-outlier"
 
 
+def _is_degenerate_matrix(sm: ScoreMatrix, csv_path: Path, label: str) -> bool:
+    """True if a real matrix carries no usable peer signal (clean-set filter).
+
+    Reuses the same degeneracy definition as the dynamics pipeline so the
+    attack 'clean set' matches the 217 clean matrices reported there.
+    """
+    from src.dynamics.classifier import is_degenerate
+    from src.dynamics.features import extract_features
+
+    try:
+        tf = extract_features(sm, csv_path=str(csv_path), question_label=label)
+    except Exception:
+        return True  # un-featurizable → not part of the clean set
+    return is_degenerate(tf)
+
+
 @dataclass(frozen=True)
 class AttackRecord:
     """One (source, attack, model) Attack Delta result."""
@@ -164,6 +180,7 @@ def run_attacks(
     model_names: list[str] | None = None,
     n_perms: int = 100,
     seed: int = 0,
+    clean_only: bool = False,
     progress: bool = True,
 ) -> AttackBatch:
     """Run all attacks across real and/or synthetic matrices.
@@ -174,6 +191,8 @@ def run_attacks(
         model_names: subset of the 6 models (default all).
         n_perms: single-outlier Monte-Carlo permutations per (team, model).
         seed: Monte-Carlo seed (reproducible).
+        clean_only: for real matrices, skip degenerate ones (no usable peer
+            signal) so the RQ1 robustness claim rests on the clean set only.
         progress: print progress to stderr.
 
     Returns:
@@ -197,8 +216,10 @@ def run_attacks(
                 print(f"  real [{idx + 1}/{len(csvs)}] {csv_path.name}",
                       file=sys.stderr, flush=True)
             matrices, _ = parse_session_with_diagnostics(csv_path)
-            batch.real_matrix_count += len(matrices)
             for (team, label), sm in sorted(matrices.items()):
+                if clean_only and _is_degenerate_matrix(sm, csv_path, label):
+                    continue
+                batch.real_matrix_count += 1
                 batch.records.extend(_eval(
                     "real", f"{team} / {label}", sm,
                     model_names, n_perms, seed,

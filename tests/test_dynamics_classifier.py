@@ -31,7 +31,7 @@ class TestBuildSynthesisedArchetypes:
 
     def test_archetype_matrix_shape(self):
         _, archetypes = build_synthesised_archetypes()
-        assert archetypes.shape == (5, 25)
+        assert archetypes.shape == (5, 24)
 
     def test_no_nan_in_archetypes(self):
         _, archetypes = build_synthesised_archetypes()
@@ -185,7 +185,7 @@ class TestClassifyTeams:
     def test_returns_one_result_per_team(self):
         labels, arch_scaled, precision, _ = self._setup()
         n = 20
-        X = np.random.default_rng(0).standard_normal((n, 25))
+        X = np.random.default_rng(0).standard_normal((n, 24))
         results = classify_teams(X, arch_scaled, precision)
         assert len(results) == n
 
@@ -199,8 +199,8 @@ class TestClassifyTeams:
         scaler = StandardScaler()
 
         rng = np.random.default_rng(42)
-        noise = rng.standard_normal((100, 25)) * 0.1  # 5 archetypes × 20
-        pool = np.tile(arch_raw, (20, 1)) + noise      # (100, 25)
+        noise = rng.standard_normal((100, 24)) * 0.1  # 5 archetypes × 20
+        pool = np.tile(arch_raw, (20, 1)) + noise      # (100, 24)
         scaler.fit(pool)
 
         arch_scaled = scaler.transform(arch_raw)
@@ -215,21 +215,21 @@ class TestClassifyTeams:
 
     def test_distances_shape(self):
         labels, arch_scaled, precision, _ = self._setup()
-        X = np.zeros((3, 25))
+        X = np.zeros((3, 24))
         results = classify_teams(X, arch_scaled, precision)
         for r in results:
             assert r.distances.shape == (5,)
 
     def test_weights_sum_to_one(self):
         labels, arch_scaled, precision, _ = self._setup()
-        X = np.random.default_rng(5).standard_normal((10, 25))
+        X = np.random.default_rng(5).standard_normal((10, 24))
         results = classify_teams(X, arch_scaled, precision)
         for r in results:
             np.testing.assert_allclose(r.weights.sum(), 1.0, atol=1e-9)
 
     def test_weights_non_negative(self):
         labels, arch_scaled, precision, _ = self._setup()
-        X = np.random.default_rng(6).standard_normal((10, 25))
+        X = np.random.default_rng(6).standard_normal((10, 24))
         results = classify_teams(X, arch_scaled, precision)
         for r in results:
             assert (r.weights >= 0).all()
@@ -237,7 +237,7 @@ class TestClassifyTeams:
     def test_label_matches_argmin_distance(self):
         """Assigned label always corresponds to the closest archetype."""
         labels, arch_scaled, precision, _ = self._setup()
-        X = np.random.default_rng(7).standard_normal((15, 25))
+        X = np.random.default_rng(7).standard_normal((15, 24))
         results = classify_teams(X, arch_scaled, precision)
         for r in results:
             expected_idx = int(np.argmin(r.distances))

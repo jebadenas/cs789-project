@@ -45,14 +45,14 @@ def _make_sm(matrix: np.ndarray, **kwargs) -> ScoreMatrix:
 
 class TestFeatureNames:
 
-    def test_length_is_25(self):
-        assert len(FEATURE_NAMES) == 25
+    def test_length_is_24(self):
+        assert len(FEATURE_NAMES) == 24
 
     def test_behavioral_names_first(self):
-        assert FEATURE_NAMES[:9] == BEHAVIORAL_FEATURE_NAMES
+        assert FEATURE_NAMES[:8] == BEHAVIORAL_FEATURE_NAMES
 
     def test_triad_names_follow(self):
-        triad_names = FEATURE_NAMES[9:]
+        triad_names = FEATURE_NAMES[8:]
         assert all(n.startswith("triad_") for n in triad_names)
         assert len(triad_names) == 16
 
@@ -230,11 +230,11 @@ class TestAsymmetry:
 
 class TestExtractFeatures:
 
-    def test_output_shape_25(self):
-        """Feature vector has exactly 25 dimensions."""
+    def test_output_shape_24(self):
+        """Feature vector has exactly 24 dimensions."""
         matrix = np.full((5, 5), 12.0, dtype=float)
         tf = extract_features(_make_sm(matrix))
-        assert tf.values.shape == (25,)
+        assert tf.values.shape == (24,)
 
     def test_no_nan_in_output(self):
         """Feature vector must be fully finite (no NaN)."""
@@ -323,7 +323,7 @@ class TestExtractFeatures:
         ])
         tf = extract_features(_make_sm(matrix))
 
-        triad_vals = tf.values[9:]  # 16 triad dims start at index 9
+        triad_vals = tf.values[8:]  # 16 triad dims start at index 8
         assert triad_vals.sum() == pytest.approx(1.0, abs=1e-9)
 
     def test_metadata_fields(self):
@@ -337,32 +337,16 @@ class TestExtractFeatures:
         assert tf.question_label == "teamwork"
         assert tf.n_students == 5
 
-    def test_assortativity_zero_for_fixed_out_degree(self):
-        """In peer-rating graphs all submitters have equal out-degree → assortativity = 0.
-
-        This is a known property of the dataset: since every student rates all peers,
-        out-degree is constant (n-1) for submitters, making degree assortativity
-        undefined / zero.
-        """
-        n = 5
-        matrix = np.tile(np.array([12, 8, 10, 6, 4], dtype=float), (n, 1)).T
-        np.fill_diagonal(matrix, 10.0)  # self-scores on diagonal
-
-        tf = extract_features(_make_sm(matrix))
-
-        assort_idx = FEATURE_NAMES.index("assortativity")
-        assert tf.values[assort_idx] == pytest.approx(0.0)
-
     def test_two_student_team(self):
         """Minimum team size — no triads possible, no NaN in output."""
         matrix = np.array([[10.0, 8.0], [12.0, 10.0]], dtype=float)
         sm = _make_sm(matrix)
         tf = extract_features(sm)
 
-        assert tf.values.shape == (25,)
+        assert tf.values.shape == (24,)
         assert not np.isnan(tf.values).any()
         # No triads with n=2 → all triad proportions zero
-        assert tf.values[9:].sum() == pytest.approx(0.0)
+        assert tf.values[8:].sum() == pytest.approx(0.0)
 
     def test_all_non_submitters_except_one(self):
         """Only one rater → extreme non_submitter_frac, no NaN output."""
