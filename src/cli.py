@@ -290,6 +290,10 @@ def attack(argv: list[str] | None = None) -> Path:
         help="Skip synthetic teams; real only.",
     )
     parser.add_argument(
+        "--clean-only", action="store_true",
+        help="Attack only the clean real matrices (skip degenerate ones).",
+    )
+    parser.add_argument(
         "--teams-per-size", type=int, default=10,
         help="Synthetic teams per size (N=4,5,6) (default: 10)",
     )
@@ -334,7 +338,11 @@ def attack(argv: list[str] | None = None) -> Path:
         model_names=args.models,
         n_perms=args.perms,
         seed=args.seed,
+        clean_only=args.clean_only,
     )
+    if not args.no_real:
+        print(f"  Real matrices attacked: {batch.real_matrix_count}"
+              f"{' (clean only)' if args.clean_only else ''}")
 
     paths = export_charts(batch, args.output)
     for p in paths:

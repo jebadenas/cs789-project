@@ -1,12 +1,20 @@
-polars
-scikit-learn
-networkx
-plotly
-dash
-ipykernel
-pydantic
-jupyter
-pandas
-pyarrow
-scipy
-umap-learn
+# Pinned for reproducibility (frozen 2026-05-30, Python 3.11).
+# Exact versions of the environment that produced the output/ results.
+numpy==2.3.0
+scipy==1.17.1
+pandas==3.0.1
+scikit-learn==1.8.0
+networkx==3.6.1
+pydantic==2.12.5
+polars==1.39.3
+pyarrow==23.0.1
+plotly==6.6.0
+dash==4.1.0
+
+# Notebooks (development only)
+ipykernel==7.2.0
+jupyter==1.1.1
+
+# Optional: enables the UMAP plot in the dynamics pipeline. The pipeline
+# skips UMAP cleanly if this is absent; all headline results are unaffected.
+umap-learn>=0.5.6  # optional
