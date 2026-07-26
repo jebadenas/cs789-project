@@ -101,6 +101,35 @@ majority archetype**. Both are handled by design below rather than by heuristic.
    (the freeze-once rule, rubric §3.8). A placeholder box reserves the slot so
    cards need not be regenerated.
 
+## Labelling UX (added after a first labelling attempt proved too hard)
+
+A trial run showed that reading raw heatmaps against the full 7-label rubric was
+too high-effort and error-prone — a warning sign, since a struggling rater
+produces low κ and a second (non-technical) rater would struggle more. Four
+changes, each kept *inside* the blind-to-the-model constraint:
+
+- **Browser UI (`ui.py` → `label_ui.html`).** A single self-contained HTML file
+  (card images embedded base64) that any rater opens in a browser and fills in
+  with dropdowns, then exports a CSV identical to `label_sheet_template.csv`.
+  Chosen over a CLI so a supervisor/labmate can use it with zero setup — the
+  second rater is the whole reason κ is worth computing.
+- **Taxonomy trimmed 7 → 5 + Unclassified** (dropped **Collusive**). Collusive
+  is not reliably separable from Cohesive on the rating matrix alone (both look
+  even/high) without journals; keeping it just manufactures noise. The remaining
+  labels (Cohesive, Dominant, Free-rider, Conflict, Disengaged) each have a
+  matrix-visible signature, so the taxonomy still distinguishes the groups — the
+  human label count need not equal the cluster count (naming is a many-to-one
+  cross-tab).
+- **No guided decision tree.** Considered and rejected: forcing raters through a
+  fixed question sequence anchors them toward the analyst's framing AND inflates
+  κ (shared procedure manufactures agreement, so κ stops measuring genuine
+  independent judgement). The rubric is shown as *reference* only (label
+  definitions + one-line signal hints).
+- **Cards stay raw data, no interpretive text.** "Richer" cards must be more
+  views of the data, never words like "B is the free-rider" — that pre-chews the
+  judgement, the same anchoring problem. The rubric §2 stimulus (matrices +
+  above-average graph + in-degree bars) is kept as-is.
+
 10. **Reliability is rater-agnostic.** `kappa.py` inner-joins two sheets on
     `card_id`, so it scores two independent humans, a second rater on a *subset*,
     or an intra-rater **test–retest** with the same code. Jos being the only rater

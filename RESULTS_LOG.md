@@ -1,5 +1,12 @@
 # Results log
 
+- **2026-07-26 — Labelling UX overhaul.** Added `src/labelling/ui.py` →
+  self-contained `label_ui.html` (embedded card images, dropdowns, autosave,
+  Download-CSV) so a non-technical second rater can label with zero setup.
+  Taxonomy trimmed 7→5+Unclassified (dropped Collusive: not matrix-separable from
+  Cohesive). No guided decision tree (would inflate κ); cards stay raw data. See
+  `docs/labelling-design.md §labelling-ux`.
+
 - **2026-07-20 — Hand-labelling tooling (RQ3-EXT Step 3, handoff-4).** Added
   `src/labelling/{sample,cards,kappa}.py`. Team-level sampler (unit =
   `(csv_path, team_name)`; AA k=4 majority, no-majority → Mixed) drew 40 of 139
