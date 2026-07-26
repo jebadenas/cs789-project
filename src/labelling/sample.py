@@ -34,12 +34,11 @@ import numpy as np
 import pandas as pd
 
 from src.dynamics.mixture import ensure_assignments
+from src.labelling.constants import QUESTIONS
 
 DYN = Path("output/dynamics")
 OUT = Path("output/labelling")
 SEED = 42
-
-QUESTIONS = ("source code", "group report", "showcase poster")
 
 # ~40-team quota over {archetype} x {flag}. Rare cells oversampled, A1 (flat)
 # capped, A2 taken as a full census, Mixed ~5. See docs/labelling-design.md.
