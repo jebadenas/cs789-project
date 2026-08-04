@@ -1,5 +1,21 @@
 # Results log
 
+- **2026-08-04 — Journal ingest + linkage audit (RQ4 / RQ3-EXT Step 4, handoff-5).**
+  Hardened `.gitignore` to deny-by-default under `data/` and added
+  `src/qualitative/{ingest,audit}.py` (+ pinned `pdfplumber==0.11.10`,
+  `python-docx==1.2.0`). Ingested **2796** Canvas journal files across 4 cohorts
+  (2022_s2, 2023_s1, 2023_s2, 2024_s1) → **618** pseudonymised students; filename
+  parse rate 100%, extraction 99.0% (42 `extract_suspect <50w`, 19 unsupported,
+  2 errors). Linkage audit (`output/qualitative/linkage_audit.md`, git-ignored):
+  analysable intersection with peer data = **2023_s1, 2023_s2, 2024_s1**;
+  2022_s2 = `calibration_only`; export does **not** reach 2024_s2/2025_s1.
+  Match rates 98.2% / 95.9% / 89.1% — `2024_s1` peer CSV uses `First Last` not
+  `Last, First`, recovered by an order-invariant **exact** join (82/92, 0
+  ambiguous, 0 false matches in the last-first cohorts). Team coverage viable in
+  all three (median 6 members journaled, 0 thin teams) → Step 4 not blocked.
+  Doc-metadata dates recoverable for 83% of files. No sentiment analysis (gated,
+  handoff-6). Nothing under `data/`/`output/` is committed.
+
 - **2026-07-20 — Hand-labelling tooling (RQ3-EXT Step 3, handoff-4).** Added
   `src/labelling/{sample,cards,kappa}.py`. Team-level sampler (unit =
   `(csv_path, team_name)`; AA k=4 majority, no-majority → Mixed) drew 40 of 139
