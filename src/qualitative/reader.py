@@ -53,12 +53,19 @@ CODING_SCHEMA = {
          "options": [[str(i), str(i)] for i in range(1, 6)]},
     ],
     "per_entry_notes": {"id": "notes", "label": "Notes"},
+    # Team-level = THE PRIMARY MEASURE (handoff-6 amended). Order and ids fixed.
     "team": [
-        {"id": "team_concern", "label": "Team concern (instructor would look?)",
-         "options": [[str(i), str(i)] for i in range(1, 6)]},
-        {"id": "within_team_divergence", "label": "Within-team divergence",
+        {"id": "within_team_divergence",
+         "label": "Within-team divergence (accounts agree?)",
          "options": [[str(i), str(i)] for i in range(1, 6)]},
         {"id": "someone_singled_out", "label": "Someone singled out",
+         "options": [["y", "Yes"], ["n", "No"]]},
+        {"id": "singled_out_agreed",
+         "label": "If singled out: others agree it's the same person?",
+         "options": [["y", "Agreed"], ["d", "Disputed"], ["x", "N/A"]]},
+        {"id": "team_concern", "label": "Team concern (instructor would look?)",
+         "options": [[str(i), str(i)] for i in range(1, 6)]},
+        {"id": "engagement_visible", "label": "Engagement visible (not perfunctory)?",
          "options": [["y", "Yes"], ["n", "No"]]},
     ],
     "team_notes": {"id": "team_notes", "label": "Team notes"},
@@ -171,6 +178,9 @@ _TEMPLATE = r"""<!DOCTYPE html>
     padding:.15rem .5rem;border-radius:999px;background:var(--accent-soft);
     color:var(--accent)}
   .badge.suspect{background:#fbe7c6;color:var(--warn)}
+  .member-head{font-weight:700;font-size:1.05rem;margin:.4rem 0 .5rem;
+    padding-bottom:.25rem;border-bottom:2px solid var(--accent);color:var(--accent)}
+  .screen-head{margin:.2rem 0 .8rem}
   /* entry */
   .entry{background:var(--panel);border:1px solid var(--line);border-radius:12px;
     padding:1.1rem 1.3rem;margin:0 0 1rem}
@@ -244,7 +254,11 @@ if(MODE==="teams"){
   const byTeam=new Map();
   DATA.forEach(e=>{ if(!byTeam.has(e.team_label)) byTeam.set(e.team_label,[]);
                     byTeam.get(e.team_label).push(e); });
-  [...byTeam.keys()].sort().forEach(t=>SCREENS.push({team:t,entries:byTeam.get(t)}));
+  [...byTeam.keys()].sort((a,b)=>{            // extract_check always last
+    if(a==="extract_check") return 1;
+    if(b==="extract_check") return -1;
+    return a<b?-1:a>b?1:0;
+  }).forEach(t=>SCREENS.push({team:t,entries:byTeam.get(t)}));
 }else{
   DATA.forEach(e=>SCREENS.push({team:null,entries:[e]}));
 }
@@ -265,10 +279,13 @@ let scr = STATE.screen||0;          // active screen index
 let slotPtr = 0;                    // active keyed-slot index within the screen
 
 // ---- slot model: ordered keyed fields for the active screen ------------ //
+function isExtractCheck(s){ return s.entries.every(e=>e.section==="suspect"); }
 function slots(){
   const s=SCREENS[scr], out=[];
-  s.entries.forEach(e=> PE.forEach(f=> out.push({kind:"entry",ref:e.entry_uid,field:f})));
-  if(MODE==="teams") TEAMF.forEach(f=> out.push({kind:"team",ref:s.team,field:f}));
+  s.entries.forEach(e=>{ if(e.section!=="suspect")
+    PE.forEach(f=> out.push({kind:"entry",ref:e.entry_uid,field:f})); });
+  if(MODE==="teams" && !isExtractCheck(s))
+    TEAMF.forEach(f=> out.push({kind:"team",ref:s.team,field:f}));
   return out;
 }
 function entryVal(uid,fid){ return (STATE.entry[uid]||{})[fid]; }
@@ -277,7 +294,8 @@ function setEntry(uid,fid,v){ (STATE.entry[uid]=STATE.entry[uid]||{})[fid]=v; sa
 function setTeam(t,fid,v){ (STATE.team[t]=STATE.team[t]||{})[fid]=v; save(); }
 
 function entriesCoded(scrObj){
-  return scrObj.entries.every(e=> PE.every(f=> entryVal(e.entry_uid,f.id)!=null));
+  return scrObj.entries.filter(e=>e.section!=="suspect")
+    .every(e=> PE.every(f=> entryVal(e.entry_uid,f.id)!=null));
 }
 
 // ---- render ------------------------------------------------------------ //
@@ -303,7 +321,7 @@ function entryCard(e,activeUid){
   const card=h("div","entry"+(e.entry_uid===activeUid?" active":""));
   card.dataset.uid=e.entry_uid;
   const meta=h("div","meta");
-  if(MODE==="teams") meta.appendChild(h("span","badge",e.member_label));
+  if(MODE==="teams" && e.member_label) meta.appendChild(h("span","badge","Member "+e.member_label));
   meta.appendChild(h("span",null,"Journal "+e.journal_index));
   meta.appendChild(h("span",null,e.word_count+" words"));
   if(e.section==="suspect") meta.appendChild(h("span","badge suspect","suspect <50w"));
@@ -311,6 +329,17 @@ function entryCard(e,activeUid){
   const body=h("div","text"+(e.text?"":" empty"));
   body.textContent = e.text || "(no text extracted)";
   card.appendChild(body);
+
+  if(e.section==="suspect"){
+    const s2=h("div","code-strip");
+    s2.appendChild(h("div","hint",
+      "Extract check — what is this? (free text; not part of the coded set)"));
+    const nf=SCHEMA.per_entry_notes, ta=h("textarea");
+    ta.dataset.uid=e.entry_uid; ta.dataset.fid=nf.id;
+    ta.value=entryVal(e.entry_uid,nf.id)||"";
+    ta.oninput=()=>setEntry(e.entry_uid,nf.id,ta.value);
+    s2.appendChild(ta); card.appendChild(s2); return card;
+  }
 
   const strip=h("div","code-strip");
   const active=slots()[slotPtr];
@@ -360,14 +389,29 @@ function render(){
   const activeSlot=slots()[slotPtr];
   const activeUid = activeSlot && activeSlot.kind==="entry" ? activeSlot.ref
                     : (s.entries[0]||{}).entry_uid;
-  s.entries.forEach(e=> root.appendChild(entryCard(e,activeUid)));
-  if(MODE==="teams") root.appendChild(teamPanel(s));
+  const extract=isExtractCheck(s);
+  if(extract) root.appendChild(h("h3","screen-head",
+    "Extract check — short files; confirm what each one is"));
+  let lastMember=null;
+  s.entries.forEach(e=>{
+    if(MODE==="teams" && !extract && e.member_label!==lastMember){
+      lastMember=e.member_label;
+      root.appendChild(h("div","member-head","Member "+e.member_label));
+    }
+    root.appendChild(entryCard(e,activeUid));
+  });
+  if(MODE==="teams" && !extract) root.appendChild(teamPanel(s));
 
   document.getElementById("pos").textContent =
-    (MODE==="teams"? s.team+"  ·  ":"") + "screen "+(scr+1)+" / "+SCREENS.length;
-  const codedScreens=SCREENS.filter(x=> x.entries.every(e=>
-     PE.every(f=>entryVal(e.entry_uid,f.id)!=null))
-     && (MODE!=="teams" || TEAMF.every(f=>teamVal(x.team,f.id)!=null))).length;
+    (MODE==="teams"? (extract?"Extract check":s.team)+"  ·  ":"")
+    + "screen "+(scr+1)+" / "+SCREENS.length;
+  const codedScreens=SCREENS.filter(x=>{
+    const eOk=x.entries.filter(e=>e.section!=="suspect")
+       .every(e=> PE.every(f=>entryVal(e.entry_uid,f.id)!=null));
+    const tOk=(MODE!=="teams"||isExtractCheck(x))?true
+       :TEAMF.every(f=>teamVal(x.team,f.id)!=null);
+    return eOk && tOk;
+  }).length;
   document.getElementById("progress").textContent =
     codedScreens+" / "+SCREENS.length+" screens complete";
   document.getElementById("raterName").textContent = RATER||"—";
@@ -449,9 +493,14 @@ function exportCSV(){
     rows.push(ALL_COLS.map(c=>csvEscape(r[c])).join(","));
   });
   if(MODE==="teams"){
-    [...new Set(DATA.map(e=>e.team_label))].sort().forEach(t=>{
+    // one row per real team (skip the extract-check pseudo-team); carry the
+    // team's own cohort, not the batch label (which may span cohorts).
+    const realTeams=[...new Set(DATA.filter(e=>e.section!=="suspect")
+      .map(e=>e.team_label))].sort();
+    realTeams.forEach(t=>{
+      const tc=(DATA.find(e=>e.team_label===t)||{}).cohort||COHORT;
       const r={record_type:"team",batch:BATCH,rater_id:RATER,timestamp:ts,
-        cohort:COHORT,team_label:t,team_notes:teamVal(t,"team_notes")||""};
+        cohort:tc,team_label:t,team_notes:teamVal(t,"team_notes")||""};
       TEAMF.forEach(f=> r[f.id]=teamVal(t,f.id)||"");
       rows.push(ALL_COLS.map(c=>csvEscape(r[c])).join(","));
     });

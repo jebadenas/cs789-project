@@ -30,6 +30,7 @@ from pathlib import Path
 import pandas as pd
 
 from src.parsing.parser import parse_session
+from src.qualitative import templates
 from src.qualitative.ingest import (
     CROSSWALK_CSV,
     ENTRY_MANIFEST_CSV,
@@ -434,6 +435,62 @@ def build_report(
         f"{_fmt_pct(int(total_cr), len(entries))}. Where absent, the "
         "pre/post peer-feedback contamination check must fall back to ordinal "
         "journal position plus the COMPSCI 399 timetable.\n")
+
+    # -- 9. Reflection template & archetype derivation --------------------- #
+    add("## 9. Reflection template by cohort  *(handoff-6 Task 3)*\n")
+    add("Classified from template text that recurs across many students (shared "
+        "prompts, not individual answers).\n")
+    tmpl = templates.classify_templates()
+    add("| cohort | entries | explicit team-dynamics prompt? | prompt text |")
+    add("|---|--:|:--:|---|")
+    for c in sorted(tmpl):
+        info = tmpl[c]
+        prompts = "; ".join(info["team_prompts"]) or "—"
+        add(f"| {c} | {info['n']} | "
+            f"{'**yes**' if info['has_team_prompt'] else 'no'} | {prompts[:60]} |")
+    add("")
+    have = [c for c in sorted(tmpl) if tmpl[c]["has_team_prompt"]]
+    havent = [c for c in sorted(tmpl) if not tmpl[c]["has_team_prompt"]]
+    add(f"**{', '.join(f'`{c}`' for c in have)}** prompt team dynamics "
+        f"explicitly; **{', '.join(f'`{c}`' for c in havent)}** use "
+        "individual-reflection templates (objective description / analysis / "
+        "articulation of learning / planning). **Consequence:** the template is "
+        "not constant across cohorts, so a higher rate of team-dynamics content "
+        "in a prompting cohort may reflect the *template*, not the cohort — it "
+        "must not be read as that cohort being more troubled, and this confound "
+        "must not carry into the main validation.\n")
+
+    dbi = templates.dynamics_by_index()
+    if dbi:
+        idxs = sorted(dbi)
+        add("Is `2024_s1`'s *\"assessment of team's dynamic\"* section spread "
+            "across the semester or introduced late? (share of entries "
+            "containing it, per journal index)\n")
+        add("| | " + " | ".join(f"J{i}" for i in idxs) + " |")
+        add("|---|" + "--:|" * len(idxs))
+        add("| entries | " + " | ".join(str(dbi[i][0]) for i in idxs) + " |")
+        add("| has prompt | " + " | ".join(f"{dbi[i][1]:.0f}%" for i in idxs) + " |")
+        add("")
+        j1 = dbi.get(1, (0, 0.0))[1]
+        later = [dbi[i][1] for i in idxs if i > 1]
+        if j1 < 10 and later and min(later) > 40:
+            add(f"The section is **absent at J1 ({j1:.0f}%)** and present from J2 "
+                f"on (~{min(later):.0f}–{max(later):.0f}%): it was **introduced "
+                "after the first journal**, not randomly skipped — so J1 entries "
+                "carry unprompted team content while J2–J5 carry prompted "
+                "content, within the same cohort.\n")
+
+    st = templates.archetype_derivation_stats()
+    if st:
+        add("### Team-archetype derivation (mean-load argmax)\n")
+        add(f"Team archetypes use the **argmax of mean load** across a team's "
+            f"question-matrices, not majority-vote of the per-matrix labels. Over "
+            f"{st['n_teams']} teams, majority-vote is unanimous on "
+            f"**{st['majority_unanimous']}**, ties on **{st['majority_ties']}**, "
+            f"and mean-load agrees with the resolvable majority on "
+            f"{st['meanload_eq_majority']}. Mean-load always resolves, so it is "
+            "the primary label; the majority-vote column is kept alongside in the "
+            "team keys for comparison.\n")
 
     return "\n".join(L), csvs
 

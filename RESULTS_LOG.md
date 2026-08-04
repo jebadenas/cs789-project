@@ -1,19 +1,24 @@
 # Results log
 
-- **2026-08-04 — Journal reading UI (RQ4 recon + Step-4 structured read, handoff-6).**
-  Added `src/qualitative/{sample,reader}.py` + `README.md`. `sample.py` draws
-  seeded batches: `recon` (25 entries from `2022_s2`, 5/journal-index spanning
-  word-count terciles, `ok`-only, +3 `extract_suspect` trailing) and `teams`
-  (one batch/cohort, grouped by team, pseudonymised `team_NN` + members `A`–`F`;
-  un-blinding `team_key_<cohort>.csv` never loaded by the HTML). `reader.py`
-  emits a self-contained offline HTML reader (inline CSS/JS, no CDN/network):
-  keyboard-first coding, per-entry + team-level schema (single `CODING_SCHEMA`),
-  `localStorage` autosave keyed by batch+rater, CSV import/export, reset-guard;
-  blinded per rubric §2. Batches generated for 3 cohorts (recon 0.09 MB; teams
-  391/998/376 entries, 1.3/4.8/1.6 MB — `2023_s2` near the 5 MB split threshold).
-  Verified headlessly (jsdom): code 3 → reopen restores → export CSV columns
-  match schema; teams panel locks until all member entries coded. No sentiment
-  analysis (handoff-7). Nothing under `data/`/`output/` committed.
+- **2026-08-04 — Journal reading UI, team-based (pilot + Step-4 read, handoff-6 amended).**
+  Added `src/qualitative/{sample,reader,templates}.py` + `README.md`. Reading unit
+  is the **team** (construct = within-team agreement, not affect; VADER dropped).
+  `sample.py` draws seeded batches: `pilot` (3 hand-picked teams, one per named
+  archetype, chosen by **mean-load argmax** — A2 `2024_s1` Team 12, A1 `2024_s1`
+  Team 5, A0 `2023_s2` Team 33; zero anchor-set spend; +3 `extract_suspect`) and
+  `teams` (per cohort, grouped, pseudonymised `team_NN`/members `A`–`F`; keys
+  never loaded by the HTML). `reader.py` emits a self-contained offline HTML reader
+  (inline CSS/JS, no CDN): keyboard-first coding, per-entry + team-level schema
+  (single `CODING_SCHEMA`; team-level `within_team_divergence`,
+  `singled_out_agreed`, `engagement_visible` are the A2/A0/A1 hypothesis tests),
+  `localStorage` autosave, CSV import/export, member headers, extract-check screen;
+  blinded per rubric §2. Team archetype re-derived as mean-load argmax (majority-
+  vote ties on 21/139, unanimous on 41/139; kept alongside for comparison).
+  Audit §9 template survey: `2023_s2`+`2024_s1` prompt team dynamics, `2022_s2`+
+  `2023_s1` don't; `2024_s1`'s section is absent at J1 then ~70–78% J2–J5
+  (introduced mid-semester). Verified headlessly (jsdom): full team coded →
+  reopen restores → export columns match schema; team panel locks until members
+  coded; extract-check is free-text-only. No sentiment analysis (handoff-7).
 
 - **2026-08-04 — Journal ingest + linkage audit (RQ4 / RQ3-EXT Step 4, handoff-5).**
   Hardened `.gitignore` to deny-by-default under `data/` and added

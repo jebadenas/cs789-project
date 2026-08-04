@@ -1,27 +1,28 @@
-"""Batch sampler for the by-hand journal read (handoff-6).
+"""Batch sampler for the by-hand journal read (handoff-6, amended 2026-08-04).
 
 Emits, per batch, a **text-free** spec JSON and a reviewable manifest CSV under
 ``output/qualitative/reader/``. ``reader.py`` turns a spec into the embedded-text
 HTML; the spec and manifest themselves never carry journal text, so they stay
 reviewable without exposing content.
 
-Two batch kinds:
+Two batch kinds — both **team-based** (the team is the judgement unit):
 
-* ``recon`` — 25 entries from ``2022_s2`` (5 per journal index, spanning the
-  word-count terciles), all `extract_status == ok`; plus 3 `extract_suspect`
-  files as a small trailing section for Jos to eyeball.
-* ``teams`` — one batch per analysable cohort, grouped by team. Teams and members
-  are pseudonymised (``team_01``…, members ``A``–``F``). The un-blinding key
-  (``team_NN`` → real team + archetype + flag) goes to a separate
-  ``team_key_<cohort>.csv`` that the HTML **never** loads.
+* ``pilot`` — 3 teams from ``2024_s1``, one each from archetypes A0, A2, A1, every
+  journalling member read in full. Blinded exactly like ``teams``; the
+  ``team_NN`` → archetype mapping goes to ``pilot_key.csv`` (never loaded by the
+  HTML). ``2024_s1`` is chosen because it contributes zero teams to the 40-card
+  labelled anchor set, so the pilot spends none of the scarce overlap. Plus 3
+  ``extract_suspect`` files as a trailing extract-check section.
+* ``teams`` — one batch per analysable cohort, grouped by team; teams/members
+  pseudonymised (``team_01``…, members ``A``–``F``). Key → ``team_key_<cohort>.csv``.
 
-This is data-collection instrumentation only — no sentiment analysis, no scoring.
+Data-collection instrumentation only — no sentiment analysis, no scoring.
 
 Not to be merged with ``src/labelling/sample.py`` (different strand).
 
 Run:
-    python3 -m src.qualitative.sample recon
-    python3 -m src.qualitative.sample teams            # all analysable cohorts
+    python3 -m src.qualitative.sample pilot
+    python3 -m src.qualitative.sample teams              # all analysable cohorts
     python3 -m src.qualitative.sample teams --cohort 2023_s1
 """
 
@@ -36,7 +37,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from src.qualitative.audit import candidate_keys, load_peer
+from src.qualitative.audit import load_peer
 from src.qualitative.ingest import CROSSWALK_CSV, ENTRIES_PARQUET
 
 logger = logging.getLogger(__name__)
@@ -44,101 +45,48 @@ logger = logging.getLogger(__name__)
 OUT_DIR = Path("output/qualitative/reader")
 SEED = 42
 
-RECON_COHORT = "2022_s2"
-RECON_PER_INDEX = 5
-RECON_SUSPECT_N = 3
+# Pilot teams are hand-selected (handoff-6 amendment + Jos 2026-08-04): one per
+# named archetype, chosen by mean-load argmax, zero anchor-set spend. The A0 team
+# is from a *different cohort* than the other two — acceptable for a feasibility
+# pilot (we test whether the judgement is makeable, not compare cohorts), but it
+# must NOT carry into the main validation.
+PILOT_TEAMS = (
+    {"cohort": "2024_s1", "team": "Team 12 - Poké Rangers", "archetype": "A2"},
+    {"cohort": "2024_s1", "team": "Team 5 - Pollination",   "archetype": "A1"},
+    {"cohort": "2023_s2", "team": "Team 33 - DoWe?",         "archetype": "A0"},
+)
+SUSPECT_COHORT = "2024_s1"
+SUSPECT_N = 3
 ANALYSABLE = ("2023_s1", "2023_s2", "2024_s1")
 
 DYN_ASSIGN = Path("output/dynamics/aa_k4_assignments.csv")
 _COHORT_RE = re.compile(r"S(?P<sem>\d)-(?P<year>\d{4})")
 
-# A journal file is uniquely identified downstream by this pair; we surface it as
-# a single opaque id so nothing but the HTML needs the identifiable source path.
+
 def _entry_uid(row: pd.Series) -> str:
     return f"{row['anon_id']}_{row['submission_id']}"
 
 
 # --------------------------------------------------------------------------- #
-# recon
+# archetype / load per team (from the persisted AA k=4 refit)
 # --------------------------------------------------------------------------- #
-def _span_terciles(group: pd.DataFrame, n: int, rng: np.random.Generator) -> pd.DataFrame:
-    """Pick ``n`` rows spanning the word-count terciles of ``group``.
-
-    Guarantees at least one short and one long entry rather than clustering at
-    the median. Target split for n=5 is [2, 1, 2] across (low, mid, high).
-    """
-    g = group.sort_values("word_count").reset_index(drop=True)
-    if len(g) <= n:
-        return g
-    # tercile boundaries by position
-    thirds = np.array_split(g.index.to_numpy(), 3)
-    targets = _tercile_targets(n)
-    chosen: list[int] = []
-    for bucket, t in zip(thirds, targets):
-        take = min(t, len(bucket))
-        if take:
-            chosen.extend(rng.choice(bucket, size=take, replace=False).tolist())
-    # top up if any bucket was too small
-    remaining = [i for i in g.index.to_numpy() if i not in chosen]
-    while len(chosen) < n and remaining:
-        pick = int(rng.choice(remaining))
-        chosen.append(pick)
-        remaining.remove(pick)
-    return g.loc[sorted(chosen)]
+_ARCHETYPES = ("A0", "A1", "A2", "A3")
 
 
-def _tercile_targets(n: int) -> list[int]:
-    """Split n across (low, mid, high) favouring the tails. n=5 -> [2,1,2]."""
-    base = n // 3
-    targets = [base, base, base]
-    for k, i in enumerate((0, 2, 1)):  # add extras to low, high, then mid
-        if sum(targets) >= n:
-            break
-        targets[i] += 1
-    return targets
+def _team_meta() -> dict[tuple[str, str], dict]:
+    """(cohort, team_name) -> team-level archetype record.
 
+    Team archetype = **argmax of the mean load** across the team's
+    question-matrices (Jos 2026-08-04). This is more stable than majority-vote of
+    the per-matrix argmax labels: majority ties on 21 of 139 teams and is
+    unanimous on only 41, whereas mean-load always resolves. The majority-vote
+    label is retained alongside (`majority`) for comparison, with `is_tie` /
+    `is_unanimous` so the tie rate can be reported.
 
-def build_recon(df: pd.DataFrame) -> dict:
-    rng = np.random.default_rng(SEED)
-    cohort = df[df["cohort"] == RECON_COHORT]
-
-    ok = cohort[cohort["extract_status"] == "ok"]
-    entries: list[dict] = []
-    for idx in range(1, 6):
-        g = ok[ok["journal_index"] == idx]
-        if g.empty:
-            logger.warning("recon: no 'ok' entries at journal index %d", idx)
-            continue
-        for _, row in _span_terciles(g, RECON_PER_INDEX, rng).iterrows():
-            entries.append(_entry_dict(row, section="main"))
-
-    # trailing suspect section (not part of the 25)
-    suspect = cohort[cohort["extract_status"] == "extract_suspect"]
-    if len(suspect):
-        take = min(RECON_SUSPECT_N, len(suspect))
-        picks = suspect.iloc[rng.choice(len(suspect), size=take, replace=False)]
-        for _, row in picks.iterrows():
-            entries.append(_entry_dict(row, section="suspect"))
-
-    return {
-        "batch": "recon", "mode": "recon", "seed": SEED,
-        "cohort": RECON_COHORT, "entries": entries,
-    }
-
-
-# --------------------------------------------------------------------------- #
-# teams
-# --------------------------------------------------------------------------- #
-def _team_archetypes() -> dict[tuple[str, str], dict]:
-    """(cohort, team_name) -> {archetype, flag} from the persisted AA k=4 refit.
-
-    Team archetype = majority across the team's question-matrices (no majority ->
-    'Mixed'); flag = 'Anomalous' if ANY matrix is flagged. Mirrors the
-    team-labelling derivation without importing across packages.
+    flag = 'Anomalous' if any of the team's matrices is flagged.
     """
     if not DYN_ASSIGN.exists():
-        logger.warning("%s missing — team_key archetype/flag will be blank.",
-                       DYN_ASSIGN)
+        logger.warning("%s missing — archetype/load will be blank.", DYN_ASSIGN)
         return {}
     aa = pd.read_csv(DYN_ASSIGN)
     out: dict[tuple[str, str], dict] = {}
@@ -147,12 +95,31 @@ def _team_archetypes() -> dict[tuple[str, str], dict]:
         if not m:
             continue
         cohort = f"{m.group('year')}_s{m.group('sem')}"
+        loads = {a: float(grp[f"load_{a}"].mean()) for a in _ARCHETYPES}
+        archetype = max(loads, key=loads.get)          # mean-load argmax
         modes = grp["archetype"].mode()
-        archetype = modes.iloc[0] if len(modes) == 1 else "Mixed"
-        flag = ("Anomalous" if (grp["atypicality_flag"] == "Anomalous").any()
-                else "Typical")
-        out[(cohort, team)] = {"archetype": archetype, "flag": flag}
+        majority = modes.iloc[0] if len(modes) == 1 else "Mixed"
+        out[(cohort, team)] = {
+            "archetype": archetype, "load": loads[archetype], "loads": loads,
+            "majority": majority, "is_tie": len(modes) > 1,
+            "is_unanimous": grp["archetype"].nunique() == 1,
+            "flag": ("Anomalous" if (grp["atypicality_flag"] == "Anomalous").any()
+                     else "Typical"),
+        }
     return out
+
+
+def archetype_derivation_stats() -> dict:
+    """Reportable comparison of mean-load vs majority-vote team archetypes."""
+    meta = _team_meta()
+    n = len(meta)
+    return {
+        "n_teams": n,
+        "majority_ties": sum(m["is_tie"] for m in meta.values()),
+        "majority_unanimous": sum(m["is_unanimous"] for m in meta.values()),
+        "meanload_eq_majority": sum(m["archetype"] == m["majority"]
+                                    for m in meta.values()),
+    }
 
 
 def _journal_pid_index(cohort: str, peer: dict, crosswalk: pd.DataFrame
@@ -161,67 +128,151 @@ def _journal_pid_index(cohort: str, peer: dict, crosswalk: pd.DataFrame
     key_index = peer[cohort]["key_index"]
     pid_to_names: dict[str, list[str]] = {}
     for nn in crosswalk.query("cohort == @cohort")["normalised_name"]:
-        for pid in key_index.get(nn, ()):  # candidate-key exact match
+        for pid in key_index.get(nn, ()):
             pid_to_names.setdefault(pid, []).append(nn)
     return pid_to_names
 
 
-def build_teams(df: pd.DataFrame, crosswalk: pd.DataFrame, cohort: str) -> tuple[dict, pd.DataFrame]:
+# --------------------------------------------------------------------------- #
+# shared: assemble a team's blinded entries
+# --------------------------------------------------------------------------- #
+def _team_entries(team: str, journalling: list[str], team_label: str,
+                  pid_to_names: dict[str, list[str]], name_to_anon: dict[str, str],
+                  entries_by_anon: dict, rng: np.random.Generator) -> list[dict]:
+    """Ordered, pseudonymised entry dicts for one team (members A–F)."""
+    out: list[dict] = []
+    member_order = rng.permutation(len(journalling))
+    for m_i, m_orig in enumerate(member_order):
+        pid = journalling[m_orig]
+        member_label = chr(ord("A") + m_i)
+        anon_ids = {name_to_anon[nn] for nn in pid_to_names[pid] if nn in name_to_anon}
+        for anon in sorted(anon_ids):
+            sub = entries_by_anon.get(anon)
+            if sub is None:
+                continue
+            for _, row in sub.sort_values("journal_index").iterrows():
+                if row["extract_status"] not in ("ok", "extract_suspect"):
+                    continue
+                out.append(_entry_dict(row, section="main",
+                                       team_label=team_label,
+                                       member_label=member_label))
+    return out
+
+
+def _suspect_section(df: pd.DataFrame, cohort: str, rng: np.random.Generator
+                     ) -> list[dict]:
+    """Up to SUSPECT_N extract_suspect files as a trailing extract-check group."""
+    suspect = df[(df["cohort"] == cohort) & (df["extract_status"] == "extract_suspect")]
+    if suspect.empty:
+        return []
+    take = min(SUSPECT_N, len(suspect))
+    picks = suspect.iloc[rng.choice(len(suspect), size=take, replace=False)]
+    return [_entry_dict(r, section="suspect", team_label="extract_check",
+                        member_label="") for _, r in picks.iterrows()]
+
+
+# --------------------------------------------------------------------------- #
+# pilot
+# --------------------------------------------------------------------------- #
+def build_pilot(df: pd.DataFrame, crosswalk: pd.DataFrame) -> tuple[dict, pd.DataFrame]:
+    """Assemble the 3 hand-selected pilot teams (cross-cohort), blinded."""
+    rng = np.random.default_rng(SEED)
+    peer = load_peer()
+    meta = _team_meta()
+
+    # gather each named team's journalling members (per its own cohort)
+    selected = []
+    for spec in PILOT_TEAMS:
+        coh, team = spec["cohort"], spec["team"]
+        pids = peer[coh]["teams"].get(team)
+        if pids is None:
+            raise ValueError(f"pilot team not found in peer data: {coh} / {team!r}")
+        pid_to_names = _journal_pid_index(coh, peer, crosswalk)
+        cw_c = crosswalk.query("cohort == @coh")
+        journalling = [p for p in pids if p in pid_to_names]
+        info = meta.get((coh, team), {})
+        selected.append({
+            "cohort": coh, "team": team, "intended": spec["archetype"],
+            "journalling": journalling, "pid_to_names": pid_to_names,
+            "name_to_anon": dict(zip(cw_c["normalised_name"], cw_c["anon_id"])),
+            "entries_by_anon": {a: g for a, g in
+                                df[df["cohort"] == coh].groupby("anon_id")},
+            "info": info,
+        })
+
+    # blinded, seeded team order
+    order = rng.permutation(len(selected))
+    spec_entries, key_rows = [], []
+    for new_i, orig_i in enumerate(order, start=1):
+        s = selected[orig_i]
+        team_label = f"team_{new_i:02d}"
+        spec_entries += _team_entries(
+            s["team"], s["journalling"], team_label, s["pid_to_names"],
+            s["name_to_anon"], s["entries_by_anon"], rng)
+        info = s["info"]
+        key_rows.append({
+            "team_label": team_label, "cohort": s["cohort"], "real_team": s["team"],
+            "intended_archetype": s["intended"],
+            "derived_archetype": info.get("archetype", ""),
+            "archetype_load": round(info.get("load", float("nan")), 3),
+            "majority_vote": info.get("majority", ""),
+            "flag": info.get("flag", ""),
+            "n_journalling_members": len(s["journalling"]),
+        })
+
+    spec_entries += _suspect_section(df, SUSPECT_COHORT, rng)
+    spec = {"batch": "pilot", "mode": "teams", "seed": SEED,
+            "cohort": "mixed (2024_s1, 2023_s2)", "entries": spec_entries}
+
+    print("  pilot teams (blinded — archetype shown here only for the log):")
+    for r in key_rows:
+        print(f"    {r['team_label']}  intended={r['intended_archetype']}  "
+              f"derived={r['derived_archetype']} (load {r['archetype_load']}, "
+              f"majority {r['majority_vote']}, {r['flag']})  "
+              f"members={r['n_journalling_members']}  cohort={r['cohort']}")
+    return spec, pd.DataFrame(key_rows)
+
+
+# --------------------------------------------------------------------------- #
+# teams
+# --------------------------------------------------------------------------- #
+def build_teams(df: pd.DataFrame, crosswalk: pd.DataFrame, cohort: str
+                ) -> tuple[dict, pd.DataFrame]:
     rng = np.random.default_rng(SEED)
     peer = load_peer()
     if cohort not in peer:
         raise ValueError(f"{cohort} has no peer data — cannot build a teams batch.")
-
-    arche = _team_archetypes()
+    meta = _team_meta()
     pid_to_names = _journal_pid_index(cohort, peer, crosswalk)
-    name_to_anon = dict(zip(
-        crosswalk.query("cohort == @cohort")["normalised_name"],
-        crosswalk.query("cohort == @cohort")["anon_id"]))
+    cw_c = crosswalk.query("cohort == @cohort")
+    name_to_anon = dict(zip(cw_c["normalised_name"], cw_c["anon_id"]))
     entries_by_anon = {a: g for a, g in df[df["cohort"] == cohort].groupby("anon_id")}
 
-    # teams that have ≥1 journalling member
-    teams = peer[cohort]["teams"]
-    live_teams = []
-    for team, pids in teams.items():
+    live = []
+    for team, pids in peer[cohort]["teams"].items():
         journalling = [p for p in pids if p in pid_to_names]
         if journalling:
-            live_teams.append((team, journalling))
+            live.append((team, journalling))
 
-    # pseudonymise team order
-    order = rng.permutation(len(live_teams))
-    key_rows, spec_entries = [], []
+    order = rng.permutation(len(live))
+    spec_entries, key_rows = [], []
     for new_i, orig_i in enumerate(order, start=1):
-        team, journalling = live_teams[orig_i]
+        team, journalling = live[orig_i]
         team_label = f"team_{new_i:02d}"
-        # pseudonymise members within team
-        member_order = rng.permutation(len(journalling))
-        for m_i, m_orig in enumerate(member_order):
-            pid = journalling[m_orig]
-            member_label = chr(ord("A") + m_i)
-            # a peer person may map to >1 journal normalised name (rare); take all
-            anon_ids = {name_to_anon[nn] for nn in pid_to_names[pid]
-                        if nn in name_to_anon}
-            for anon in sorted(anon_ids):
-                sub = entries_by_anon.get(anon)
-                if sub is None:
-                    continue
-                for _, row in sub.sort_values("journal_index").iterrows():
-                    if row["extract_status"] not in ("ok", "extract_suspect"):
-                        continue
-                    spec_entries.append(_entry_dict(
-                        row, section="main",
-                        team_label=team_label, member_label=member_label))
-        meta = arche.get((cohort, team), {"archetype": "", "flag": ""})
+        spec_entries += _team_entries(team, journalling, team_label,
+                                      pid_to_names, name_to_anon, entries_by_anon, rng)
+        info = meta.get((cohort, team), {})
         key_rows.append({
             "team_label": team_label, "cohort": cohort, "real_team": team,
-            "archetype": meta["archetype"], "flag": meta["flag"],
+            "archetype": info.get("archetype", ""),
+            "archetype_load": round(info.get("load", float("nan")), 3),
+            "majority_vote": info.get("majority", ""),
+            "flag": info.get("flag", ""),
             "n_journalling_members": len(journalling),
         })
 
-    spec = {
-        "batch": f"teams_{cohort}", "mode": "teams", "seed": SEED,
-        "cohort": cohort, "entries": spec_entries,
-    }
+    spec = {"batch": f"teams_{cohort}", "mode": "teams", "seed": SEED,
+            "cohort": cohort, "entries": spec_entries}
     return spec, pd.DataFrame(key_rows)
 
 
@@ -246,27 +297,30 @@ def _entry_dict(row: pd.Series, section: str, team_label: str | None = None,
     return d
 
 
-def _write_batch(spec: dict, key_df: pd.DataFrame | None = None) -> None:
+def _write_batch(spec: dict, key_df: pd.DataFrame | None = None,
+                 key_name: str | None = None) -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     batch = spec["batch"]
     (OUT_DIR / f"batch_{batch}.json").write_text(
         json.dumps(spec, indent=2), encoding="utf-8")
 
-    # text-free manifest
-    man = pd.DataFrame(spec["entries"]).drop(columns=["anon_id", "submission_id"],
-                                             errors="ignore")
+    man = pd.DataFrame(spec["entries"]).drop(
+        columns=["anon_id", "submission_id"], errors="ignore")
     man.to_csv(OUT_DIR / f"batch_manifest_{batch}.csv", index=False)
 
     if key_df is not None:
-        cohort = spec["cohort"]
-        key_df.to_csv(OUT_DIR / f"team_key_{cohort}.csv", index=False)
+        key_df.to_csv(OUT_DIR / (key_name or f"team_key_{spec['cohort']}.csv"),
+                      index=False)
 
-    n = len(spec["entries"])
-    extra = ""
-    if spec["mode"] == "teams":
-        extra = f", {man['team_label'].nunique()} teams"
-    print(f"  {batch}: {n} entries{extra} -> batch_{batch}.json + manifest"
-          + (f" + team_key_{spec['cohort']}.csv" if key_df is not None else ""))
+    teams = [e for e in spec["entries"] if e.get("team_label")
+             and e["section"] != "suspect"]
+    n_teams = len({e["team_label"] for e in teams})
+    n_suspect = sum(1 for e in spec["entries"] if e["section"] == "suspect")
+    print(f"  {batch}: {len(spec['entries'])} entries, {n_teams} teams"
+          + (f", {n_suspect} suspect" if n_suspect else "")
+          + f" -> batch_{batch}.json + manifest"
+          + (f" + {key_name or 'team_key_'+spec['cohort']+'.csv'}"
+             if key_df is not None else ""))
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -274,22 +328,22 @@ def main(argv: list[str] | None = None) -> None:
         prog="python3 -m src.qualitative.sample",
         description="Sample journal batches for the by-hand reader.",
     )
-    parser.add_argument("kind", choices=["recon", "teams"],
+    parser.add_argument("kind", choices=["pilot", "teams"],
                         help="Which batch kind to build.")
     parser.add_argument("--cohort", default=None,
                         help="teams: restrict to one cohort (default: all analysable).")
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
-    # The peer-CSV parser logs non-submitter warnings that name students —
-    # keep those off the terminal.
+    # The peer-CSV parser logs non-submitter warnings that name students.
     logging.getLogger("src.parsing.parser").setLevel(logging.CRITICAL)
 
     df = pd.read_parquet(ENTRIES_PARQUET)
     crosswalk = pd.read_csv(CROSSWALK_CSV)
 
     print(f"Sampling '{args.kind}' (seed={SEED}):")
-    if args.kind == "recon":
-        _write_batch(build_recon(df))
+    if args.kind == "pilot":
+        spec, key_df = build_pilot(df, crosswalk)
+        _write_batch(spec, key_df, key_name="pilot_key.csv")
     else:
         cohorts = [args.cohort] if args.cohort else list(ANALYSABLE)
         for c in cohorts:
