@@ -1,5 +1,20 @@
 # Results log
 
+- **2026-08-04 — Journal reading UI (RQ4 recon + Step-4 structured read, handoff-6).**
+  Added `src/qualitative/{sample,reader}.py` + `README.md`. `sample.py` draws
+  seeded batches: `recon` (25 entries from `2022_s2`, 5/journal-index spanning
+  word-count terciles, `ok`-only, +3 `extract_suspect` trailing) and `teams`
+  (one batch/cohort, grouped by team, pseudonymised `team_NN` + members `A`–`F`;
+  un-blinding `team_key_<cohort>.csv` never loaded by the HTML). `reader.py`
+  emits a self-contained offline HTML reader (inline CSS/JS, no CDN/network):
+  keyboard-first coding, per-entry + team-level schema (single `CODING_SCHEMA`),
+  `localStorage` autosave keyed by batch+rater, CSV import/export, reset-guard;
+  blinded per rubric §2. Batches generated for 3 cohorts (recon 0.09 MB; teams
+  391/998/376 entries, 1.3/4.8/1.6 MB — `2023_s2` near the 5 MB split threshold).
+  Verified headlessly (jsdom): code 3 → reopen restores → export CSV columns
+  match schema; teams panel locks until all member entries coded. No sentiment
+  analysis (handoff-7). Nothing under `data/`/`output/` committed.
+
 - **2026-08-04 — Journal ingest + linkage audit (RQ4 / RQ3-EXT Step 4, handoff-5).**
   Hardened `.gitignore` to deny-by-default under `data/` and added
   `src/qualitative/{ingest,audit}.py` (+ pinned `pdfplumber==0.11.10`,
