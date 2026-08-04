@@ -277,6 +277,9 @@ function save(){ localStorage.setItem(stateKey(),JSON.stringify(STATE));
 
 let scr = STATE.screen||0;          // active screen index
 let slotPtr = 0;                    // active keyed-slot index within the screen
+// how the next render should treat scroll: keep position (mouse edit), follow
+// the keyboard-active field, or jump to top (screen change).
+let scrollMode = "preserve";        // "preserve" | "active" | "top"
 
 // ---- slot model: ordered keyed fields for the active screen ------------ //
 function isExtractCheck(s){ return s.entries.every(e=>e.section==="suspect"); }
@@ -384,6 +387,7 @@ function teamPanel(scrObj){
 }
 
 function render(){
+  const y0=window.scrollY;
   const root=document.getElementById("screen"); root.innerHTML="";
   const s=SCREENS[scr];
   const activeSlot=slots()[slotPtr];
@@ -416,8 +420,12 @@ function render(){
     codedScreens+" / "+SCREENS.length+" screens complete";
   document.getElementById("raterName").textContent = RATER||"—";
   STATE.screen=scr; save();
-  const act=document.querySelector(".field.on");
-  if(act) act.scrollIntoView({block:"nearest"});
+  if(scrollMode==="top"){ window.scrollTo(0,0); }
+  else if(scrollMode==="active"){
+    const act=document.querySelector(".field.on");
+    if(act) act.scrollIntoView({block:"nearest"}); else window.scrollTo(0,y0);
+  } else { window.scrollTo(0,y0); }   // "preserve" — e.g. a mouse click
+  scrollMode="preserve";
 }
 
 // ---- interaction ------------------------------------------------------- //
@@ -432,6 +440,7 @@ function advanceIfActive(kind,ref,fid){
 }
 function goScreen(i){
   if(i<0||i>=SCREENS.length) return;
+  scrollMode="top";                 // new screen -> start at the top
   scr=i; slotPtr=firstUncodedSlot(); render();
 }
 function firstUncodedSlot(){
@@ -454,6 +463,7 @@ document.addEventListener("keydown",ev=>{
   const sl=slots(), a=sl[slotPtr]; if(!a) return;
   const keys=a.field.options.map(o=>o[0]);
   if(keys.includes(ev.key)){
+    scrollMode="active";            // keyboard -> follow the active field
     if(a.kind==="entry") applyEntry(a.ref,a.field.id,ev.key);
     else applyTeam(a.ref,a.field.id,ev.key);
     ev.preventDefault();
