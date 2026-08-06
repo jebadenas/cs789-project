@@ -39,36 +39,46 @@ SIZE_ALERT_MB = 5.0
 # --------------------------------------------------------------------------- #
 # Each keyed field: id, label, and options as [key, display]. The option key IS
 # the keyboard key. `notes` fields are free text (focused with `/`), not keyed.
+# Codebook v2 (handoff-7; rationale in notes/pilot-coding-findings.md R1–R7).
+# v2 data must NOT be pooled with the v1 pilot.
 CODING_SCHEMA = {
+    "codebook_version": "v2",
     "per_entry": [
         {"id": "mentions_teammates", "label": "Mentions teammates",
+         "help": "any statement about another member's state, behaviour or "
+                 "contribution, including collective ones (“everyone is "
+                 "contributing well”). Describing shared work with “we” is No.",
          "options": [["y", "Yes"], ["n", "No"]]},
-        {"id": "discusses_team_process", "label": "Discusses team process",
-         "options": [["y", "Yes"], ["n", "No"]]},
-        {"id": "negative_teammate_content", "label": "Negative teammate content",
-         "options": [["y", "Yes"], ["n", "No"]]},
+        {"id": "teammate_content_valence", "label": "Teammate content valence",
+         "options": [["p", "Positive"], ["n", "Negative"], ["m", "Mixed"],
+                     ["o", "None"]]},
         {"id": "affect_style", "label": "Affect style",
          "options": [["p", "Plain"], ["h", "Hedged"], ["a", "Absent"]]},
-        {"id": "concern_rating", "label": "Concern rating",
-         "options": [[str(i), str(i)] for i in range(1, 6)]},
     ],
     "per_entry_notes": {"id": "notes", "label": "Notes"},
-    # Team-level = THE PRIMARY MEASURE (handoff-6 amended). Order and ids fixed.
+    # Team-level = THE PRIMARY MEASURE. Order and ids fixed.
     "team": [
-        {"id": "within_team_divergence",
-         "label": "Within-team divergence (accounts agree?)",
-         "options": [[str(i), str(i)] for i in range(1, 6)]},
+        {"id": "within_team_divergence", "label": "Within-team divergence",
+         "options": [[str(i), str(i)] for i in range(1, 6)],
+         "anchors": ["1 = accounts agree", "5 = incompatible"]},
         {"id": "someone_singled_out", "label": "Someone singled out",
          "options": [["y", "Yes"], ["n", "No"]]},
+        {"id": "singled_out_direction",
+         "label": "↳ Direction they're singled out",
+         "options": [["a", "Above (more)"], ["b", "Below (less)"], ["x", "Both"]],
+         "showIf": {"field": "someone_singled_out", "eq": "y"}},
         {"id": "singled_out_agreed",
-         "label": "If singled out: others agree it's the same person?",
-         "options": [["y", "Agreed"], ["d", "Disputed"], ["x", "N/A"]]},
+         "label": "↳ Others agree it's the same person?",
+         "options": [["y", "Agreed"], ["d", "Disputed"], ["x", "N/A"]],
+         "showIf": {"field": "someone_singled_out", "eq": "y"}},
         {"id": "team_concern", "label": "Team concern (instructor would look?)",
-         "options": [[str(i), str(i)] for i in range(1, 6)]},
-        {"id": "engagement_visible", "label": "Engagement visible (not perfunctory)?",
+         "options": [[str(i), str(i)] for i in range(1, 6)],
+         "anchors": ["1 = no concern", "5 = clear concern"]},
+        {"id": "evidence_sufficient",
+         "label": "Is there enough here to judge this team either way?",
          "options": [["y", "Yes"], ["n", "No"]]},
     ],
-    "team_notes": {"id": "team_notes", "label": "Team notes"},
+    "team_notes": {"id": "team_notes", "label": "Team notes", "required": True},
 }
 
 
@@ -203,6 +213,8 @@ _TEMPLATE = r"""<!DOCTYPE html>
   .opt.sel{background:var(--accent);color:#fff;border-color:var(--accent)}
   .opt.sel .k{color:#d9e7e2}
   .field.on .opt{border-color:var(--active)}
+  .fnote{flex-basis:100%;color:var(--muted);font-size:.8rem;padding-left:15.6rem;margin-top:.15rem}
+  textarea.needed{border-color:var(--warn);background:#fff8ec}
   textarea{width:100%;max-width:70ch;min-height:2.6rem;font:inherit;
     padding:.5rem;border:1px solid var(--line);border-radius:8px;resize:vertical}
   .done-tick{color:var(--accent);font-weight:700}
@@ -271,7 +283,7 @@ function load(){
   try{ return JSON.parse(localStorage.getItem(stateKey())) || blank(); }
   catch(_){ return blank(); }
 }
-function blank(){ return {entry:{},team:{},screen:0}; }
+function blank(){ return {entry:{},team:{},entryTime:{},teamTime:{},screen:0}; }
 function save(){ localStorage.setItem(stateKey(),JSON.stringify(STATE));
                  localStorage.setItem("reader:lastRater",RATER); }
 
@@ -288,7 +300,7 @@ function slots(){
   s.entries.forEach(e=>{ if(e.section!=="suspect")
     PE.forEach(f=> out.push({kind:"entry",ref:e.entry_uid,field:f})); });
   if(MODE==="teams" && !isExtractCheck(s))
-    TEAMF.forEach(f=> out.push({kind:"team",ref:s.team,field:f}));
+    visibleTeamFields(s.team).forEach(f=> out.push({kind:"team",ref:s.team,field:f}));
   return out;
 }
 function entryVal(uid,fid){ return (STATE.entry[uid]||{})[fid]; }
@@ -296,10 +308,30 @@ function teamVal(t,fid){ return (STATE.team[t]||{})[fid]; }
 function setEntry(uid,fid,v){ (STATE.entry[uid]=STATE.entry[uid]||{})[fid]=v; save(); }
 function setTeam(t,fid,v){ (STATE.team[t]=STATE.team[t]||{})[fid]=v; save(); }
 
+// conditional (showIf) team fields; the two "singled out" follow-ups only when yes
+function teamFieldVisible(t,field){
+  if(!field.showIf) return true;
+  return teamVal(t,field.showIf.field)===field.showIf.eq;
+}
+function visibleTeamFields(t){ return TEAMF.filter(f=>teamFieldVisible(t,f)); }
+const NOTES_REQ = !!(SCHEMA.team_notes && SCHEMA.team_notes.required);
+function teamNotesOk(t){
+  return !NOTES_REQ || (teamVal(t,SCHEMA.team_notes.id)||"").trim()!=="";
+}
+function teamComplete(t){
+  return visibleTeamFields(t).every(f=> teamVal(t,f.id)!=null) && teamNotesOk(t);
+}
+function entryComplete(uid){ return PE.every(f=> entryVal(uid,f.id)!=null); }
+
 function entriesCoded(scrObj){
   return scrObj.entries.filter(e=>e.section!=="suspect")
-    .every(e=> PE.every(f=> entryVal(e.entry_uid,f.id)!=null));
+    .every(e=> entryComplete(e.entry_uid));
 }
+// coded_at stamps (per record, on completion) — pilot lacked per-team timing
+function stampEntry(uid){ if(entryComplete(uid)){
+  (STATE.entryTime=STATE.entryTime||{})[uid]=new Date().toISOString(); save(); } }
+function stampTeam(t){ if(teamComplete(t)){
+  (STATE.teamTime=STATE.teamTime||{})[t]=new Date().toISOString(); save(); } }
 
 // ---- render ------------------------------------------------------------ //
 function h(tag,cls,txt){ const el=document.createElement(tag);
@@ -317,6 +349,8 @@ function optionRow(field,curVal,onPick,isActive){
   });
   wrap.appendChild(opts);
   if(curVal!=null) wrap.appendChild(h("span","done-tick"," ✓"));
+  const note = field.help || (field.anchors ? field.anchors.join("   …   ") : null);
+  if(note) wrap.appendChild(h("div","fnote",note));
   return wrap;
 }
 
@@ -371,17 +405,20 @@ function teamPanel(scrObj){
   if(locked){ p.appendChild(h("div","lockmsg",
       "Unlocks once every member entry above is coded.")); return p; }
   const active=slots()[slotPtr];
-  TEAMF.forEach(f=>{
+  visibleTeamFields(scrObj.team).forEach(f=>{
     const isActive= active && active.kind==="team" && active.field.id===f.id;
     p.appendChild(optionRow(f, teamVal(scrObj.team,f.id),
       v=>applyTeam(scrObj.team,f.id,v), isActive));
   });
   const nf=SCHEMA.team_notes;
   const nrow=h("div","field");
-  nrow.appendChild(h("span","flabel",nf.label));
+  nrow.appendChild(h("span","flabel",nf.label+(NOTES_REQ?" (required)":"")));
   const ta=h("textarea"); ta.dataset.team=scrObj.team; ta.dataset.fid=nf.id;
+  if(NOTES_REQ && !teamNotesOk(scrObj.team)) ta.classList.add("needed");
   ta.value=teamVal(scrObj.team,nf.id)||"";
-  ta.oninput=()=>setTeam(scrObj.team,nf.id,ta.value);
+  ta.oninput=()=>{ setTeam(scrObj.team,nf.id,ta.value);
+    ta.classList.toggle("needed", NOTES_REQ && !teamNotesOk(scrObj.team));
+    stampTeam(scrObj.team); };
   nrow.appendChild(ta); p.appendChild(nrow);
   return p;
 }
@@ -411,9 +448,8 @@ function render(){
     + "screen "+(scr+1)+" / "+SCREENS.length;
   const codedScreens=SCREENS.filter(x=>{
     const eOk=x.entries.filter(e=>e.section!=="suspect")
-       .every(e=> PE.every(f=>entryVal(e.entry_uid,f.id)!=null));
-    const tOk=(MODE!=="teams"||isExtractCheck(x))?true
-       :TEAMF.every(f=>teamVal(x.team,f.id)!=null);
+       .every(e=> entryComplete(e.entry_uid));
+    const tOk=(MODE!=="teams"||isExtractCheck(x))?true:teamComplete(x.team);
     return eOk && tOk;
   }).length;
   document.getElementById("progress").textContent =
@@ -429,14 +465,27 @@ function render(){
 }
 
 // ---- interaction ------------------------------------------------------- //
-function applyEntry(uid,fid,v){ setEntry(uid,fid,v); advanceIfActive("entry",uid,fid); render(); }
-function applyTeam(t,fid,v){ setTeam(t,fid,v); advanceIfActive("team",t,fid); render(); }
+function applyEntry(uid,fid,v){ setEntry(uid,fid,v); stampEntry(uid);
+  advanceIfActive("entry",uid,fid); render(); }
+function applyTeam(t,fid,v){ setTeam(t,fid,v); stampTeam(t);
+  advanceIfActive("team",t,fid); render(); }
 function advanceIfActive(kind,ref,fid){
   const sl=slots(), a=sl[slotPtr];
   if(a && a.kind===kind && a.ref===ref && a.field.id===fid){
     if(slotPtr < sl.length-1){ slotPtr++; }
-    else { goScreen(scr+1); }   // last slot of the screen set -> next screen
+    else {
+      // last keyed slot. If the team note is required but empty, hold here and
+      // focus it instead of advancing — the team isn't complete without it.
+      const s=SCREENS[scr];
+      if(MODE==="teams" && !isExtractCheck(s) && !teamNotesOk(s.team)){
+        scrollMode="preserve"; focusTeamNotes(s.team);
+      } else { goScreen(scr+1); }
+    }
   }
+}
+function focusTeamNotes(t){
+  const ta=document.querySelector(`textarea[data-team="${t}"][data-fid="team_notes"]`);
+  if(ta) ta.focus();
 }
 function goScreen(i){
   if(i<0||i>=SCREENS.length) return;
@@ -482,11 +531,12 @@ document.getElementById("prevBtn").onclick=()=>goScreen(scr-1);
 document.getElementById("nextBtn").onclick=()=>goScreen(scr+1);
 
 // ---- CSV export/import ------------------------------------------------- //
-const ENTRY_COLS=["record_type","batch","rater_id","timestamp","cohort",
-  "entry_uid","journal_index","section","team_label","member_label",
-  ...PE.map(f=>f.id),"notes"];
-const TEAM_COLS=["record_type","batch","rater_id","timestamp","cohort",
-  "team_label",...TEAMF.map(f=>f.id),"team_notes"];
+const CBV=SCHEMA.codebook_version||"";
+const ENTRY_COLS=["record_type","codebook_version","batch","rater_id","timestamp",
+  "coded_at","cohort","entry_uid","journal_index","section","team_label",
+  "member_label",...PE.map(f=>f.id),"notes"];
+const TEAM_COLS=["record_type","codebook_version","batch","rater_id","timestamp",
+  "coded_at","cohort","team_label",...TEAMF.map(f=>f.id),"team_notes"];
 const ALL_COLS=[...new Set([...ENTRY_COLS,...TEAM_COLS])];
 
 function csvEscape(v){ v=(v==null?"":String(v));
@@ -495,7 +545,8 @@ function exportCSV(){
   const ts=new Date().toISOString();
   const rows=[ALL_COLS.join(",")];
   DATA.forEach(e=>{
-    const r={record_type:"entry",batch:BATCH,rater_id:RATER,timestamp:ts,
+    const r={record_type:"entry",codebook_version:CBV,batch:BATCH,rater_id:RATER,
+      timestamp:ts,coded_at:(STATE.entryTime||{})[e.entry_uid]||"",
       cohort:e.cohort,entry_uid:e.entry_uid,journal_index:e.journal_index,
       section:e.section,team_label:e.team_label||"",member_label:e.member_label||"",
       notes:entryVal(e.entry_uid,"notes")||""};
@@ -509,9 +560,11 @@ function exportCSV(){
       .map(e=>e.team_label))].sort();
     realTeams.forEach(t=>{
       const tc=(DATA.find(e=>e.team_label===t)||{}).cohort||COHORT;
-      const r={record_type:"team",batch:BATCH,rater_id:RATER,timestamp:ts,
+      const r={record_type:"team",codebook_version:CBV,batch:BATCH,rater_id:RATER,
+        timestamp:ts,coded_at:(STATE.teamTime||{})[t]||"",
         cohort:tc,team_label:t,team_notes:teamVal(t,"team_notes")||""};
-      TEAMF.forEach(f=> r[f.id]=teamVal(t,f.id)||"");
+      // only export a conditional field when it is applicable (visible)
+      TEAMF.forEach(f=> r[f.id]=teamFieldVisible(t,f)?(teamVal(t,f.id)||""):"");
       rows.push(ALL_COLS.map(c=>csvEscape(r[c])).join(","));
     });
   }

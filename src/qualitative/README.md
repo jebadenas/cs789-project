@@ -32,9 +32,10 @@ Everything this package produces is **identifiable student data** and is
 
 ```bash
 # 1. sample a batch (writes a text-free spec + manifest under output/qualitative/reader/)
-python3 -m src.qualitative.sample pilot                 # 3 hand-picked teams (A0/A1/A2) + 3 suspect
-python3 -m src.qualitative.sample teams                 # one batch per analysable cohort
+python3 -m src.qualitative.sample pilot                 # v1 pilot: 3 hand-picked teams (frozen)
+python3 -m src.qualitative.sample teams                 # one batch per analysable cohort (v2)
 python3 -m src.qualitative.sample teams --cohort 2023_s1
+python3 -m src.qualitative.sample main                  # main-run team sample (32 teams) -> CSV
 
 # 2. turn a spec into the reader HTML (embeds the journal text)
 python3 -m src.qualitative.reader pilot
@@ -91,18 +92,27 @@ labels — so the journal read stays an independent validation of Step 4.
 
 ### Export CSV shape
 
-One file, two record types (`record_type` column):
+Every row carries `codebook_version` (currently **`v2`** — do **not** pool v2 with
+the v1 pilot) and a per-record `coded_at` timestamp (stamped on completion, so
+per-entry / per-team duration is recoverable). Two record types (`record_type`):
 
-- `entry` rows: `entry_uid, cohort, journal_index, section, team_label,
-  member_label, mentions_teammates, discusses_team_process,
-  negative_teammate_content, affect_style, concern_rating, notes`.
-- `team` rows: `team_label, cohort, within_team_divergence, someone_singled_out,
-  singled_out_agreed, team_concern, engagement_visible, team_notes` — the
-  **team-level fields are the primary measure**. `within_team_divergence`,
-  `singled_out_agreed` and `engagement_visible` are the hypothesis tests (A2
-  contested inequality, A0 consensual inequality, A1 engaged-vs-disengaged).
-- `extract_check` entries (the 3 short `suspect` files) carry only a free-text
+- `entry` rows (codebook v2 — 3 fields): `mentions_teammates`,
+  `teammate_content_valence` (positive/negative/mixed/none), `affect_style`,
+  `notes`. (`discusses_team_process` and entry-level `concern_rating` were
+  dropped after the pilot; `negative_teammate_content` became the four-way
+  valence — see `notes/pilot-coding-findings.md` R4/R5/R6.)
+- `team` rows — **the primary measure**: `within_team_divergence` (1–5, anchors
+  on screen), `someone_singled_out`, `singled_out_direction` (above/below/both,
+  only when singled out = y), `singled_out_agreed` (only when singled out = y),
+  `team_concern`, `evidence_sufficient`, `team_notes` (**required**).
+  `within_team_divergence`, `singled_out_direction`/`agreed` and
+  `evidence_sufficient` are the A2/A0-vs-Dominant/A1 hypothesis tests.
+- `extract_check` entries (the short `suspect` files) carry only a free-text
   `notes` field — a sanity check, not part of the coded team set.
+
+The main-run sample lives in `output/qualitative/main_run_sample.csv` (32 teams:
+A0/A2 census, A1 word-count tails, A3 random) and carries `mean_word_count` per
+team; batch manifests carry `team_mean_word_count`.
 
 The coding schema is defined once in `reader.py` (`CODING_SCHEMA`) and shared by
 both modes — change fields there, regenerate, and the UI + CSV follow.

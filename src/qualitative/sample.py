@@ -277,6 +277,107 @@ def build_teams(df: pd.DataFrame, crosswalk: pd.DataFrame, cohort: str
 
 
 # --------------------------------------------------------------------------- #
+# main-run sample (handoff-7 Task 3)
+# --------------------------------------------------------------------------- #
+MAIN_RUN_CSV = Path("output/qualitative/main_run_sample.csv")
+
+
+def _team_word_counts(df: pd.DataFrame, crosswalk: pd.DataFrame, peer: dict
+                      ) -> pd.DataFrame:
+    """One row per journalling team across the analysable cohorts, with its
+    mean journal word count and mean-load archetype."""
+    meta = _team_meta()
+    rows = []
+    for coh in ANALYSABLE:
+        pid_to_names = _journal_pid_index(coh, peer, crosswalk)
+        cw = crosswalk.query("cohort == @coh")
+        name_to_anon = dict(zip(cw["normalised_name"], cw["anon_id"]))
+        eba = {a: g for a, g in df[df["cohort"] == coh].groupby("anon_id")}
+        for team, pids in peer[coh]["teams"].items():
+            journalling = [p for p in pids if p in pid_to_names]
+            if not journalling:
+                continue
+            wcs = []
+            for p in journalling:
+                for nn in pid_to_names[p]:
+                    sub = eba.get(name_to_anon.get(nn))
+                    if sub is not None:
+                        wcs += sub[sub["extract_status"].isin(
+                            ["ok", "extract_suspect"])]["word_count"].tolist()
+            info = meta.get((coh, team), {})
+            rows.append({
+                "cohort": coh, "real_team": team,
+                "archetype": info.get("archetype", ""),
+                "archetype_load": round(info.get("load", float("nan")), 3),
+                "majority_vote": info.get("majority", ""),
+                "flag": info.get("flag", ""),
+                "n_journalling_members": len(journalling),
+                "n_entries": len(wcs),
+                "mean_word_count": round(float(np.mean(wcs)), 1) if wcs else 0.0,
+            })
+    return pd.DataFrame(rows)
+
+
+def build_main_run_sample(df: pd.DataFrame, crosswalk: pd.DataFrame) -> pd.DataFrame:
+    """A0/A2 census, A1 by word-count tails (5 low + 5 high), A3 random = 32."""
+    peer = load_peer()
+    teams = _team_word_counts(df, crosswalk, peer)
+
+    counts = teams["archetype"].value_counts().to_dict()
+    print("  journalling teams by archetype (mean-load argmax):",
+          {a: counts.get(a, 0) for a in ("A0", "A1", "A2", "A3")})
+    if counts.get("A0") != 8 or counts.get("A2") != 10:
+        print("  ⚠️  STOP-AND-REPORT: A0/A2 counts are not 8/10 — the census "
+              "design assumes those numbers. Not sampling.")
+
+    picks = []
+    for arch in ("A0", "A2"):                       # census
+        p = teams[teams["archetype"] == arch].copy()
+        p["stratum"] = "census"
+        picks.append(p)
+    a1 = teams[teams["archetype"] == "A1"].sort_values("mean_word_count")
+    low, high = a1.head(5).copy(), a1.tail(5).copy()
+    low["stratum"], high["stratum"] = "A1_low_wordcount", "A1_high_wordcount"
+    picks += [low, high]
+    a3 = teams[teams["archetype"] == "A3"]
+    a3pick = a3.sample(n=min(4, len(a3)), random_state=SEED).copy()
+    a3pick["stratum"] = "A3_random"
+    picks.append(a3pick)
+
+    chosen = pd.concat(picks, ignore_index=True)
+    chosen.insert(0, "sample_id", [f"team_{i+1:02d}" for i in range(len(chosen))])
+    # flag census teams that were already in the v1 pilot (re-read under v2; the
+    # pilot's v1 codes are not pooled, but Jos should know about the overlap).
+    pilot_set = {(t["cohort"], t["team"]) for t in PILOT_TEAMS}
+    chosen["in_pilot"] = [(c, t) in pilot_set for c, t
+                          in zip(chosen["cohort"], chosen["real_team"])]
+    MAIN_RUN_CSV.parent.mkdir(parents=True, exist_ok=True)
+    chosen.to_csv(MAIN_RUN_CSV, index=False)
+
+    # realised cell counts
+    print(f"  main-run: {len(chosen)} teams -> {MAIN_RUN_CSV}")
+    print("  archetype x cohort:")
+    ct = chosen.pivot_table(index="archetype", columns="cohort",
+                            values="sample_id", aggfunc="count", fill_value=0)
+    for a in ct.index:
+        print(f"    {a}: " + ", ".join(f"{c}={int(ct.loc[a, c])}" for c in ct.columns)
+              + f"  (tot {int(ct.loc[a].sum())})")
+    print(f"  A1 low-wordcount means : "
+          f"{sorted(round(x,0) for x in low['mean_word_count'])}")
+    print(f"  A1 high-wordcount means: "
+          f"{sorted(round(x,0) for x in high['mean_word_count'])}")
+    gap = high["mean_word_count"].min() - low["mean_word_count"].max()
+    if gap <= 0:
+        print("  ⚠️  A1 word-count tails overlap — the low/high split may not be "
+              "meaningful; report before relying on it.")
+    n_pilot = int(chosen["in_pilot"].sum())
+    if n_pilot:
+        print(f"  note: {n_pilot} census team(s) were in the v1 pilot "
+              "(in_pilot=True) — re-read under v2, pilot v1 codes not pooled.")
+    return chosen
+
+
+# --------------------------------------------------------------------------- #
 # shared
 # --------------------------------------------------------------------------- #
 def _entry_dict(row: pd.Series, section: str, team_label: str | None = None,
@@ -304,8 +405,11 @@ def _write_batch(spec: dict, key_df: pd.DataFrame | None = None,
     (OUT_DIR / f"batch_{batch}.json").write_text(
         json.dumps(spec, indent=2), encoding="utf-8")
 
-    man = pd.DataFrame(spec["entries"]).drop(
-        columns=["anon_id", "submission_id"], errors="ignore")
+    man = pd.DataFrame(spec["entries"])
+    if "team_label" in man.columns:                 # mean journal word count/team
+        man["team_mean_word_count"] = (
+            man.groupby("team_label")["word_count"].transform("mean").round(1))
+    man = man.drop(columns=["anon_id", "submission_id"], errors="ignore")
     man.to_csv(OUT_DIR / f"batch_manifest_{batch}.csv", index=False)
 
     if key_df is not None:
@@ -328,8 +432,8 @@ def main(argv: list[str] | None = None) -> None:
         prog="python3 -m src.qualitative.sample",
         description="Sample journal batches for the by-hand reader.",
     )
-    parser.add_argument("kind", choices=["pilot", "teams"],
-                        help="Which batch kind to build.")
+    parser.add_argument("kind", choices=["pilot", "teams", "main"],
+                        help="Which batch kind to build ('main' = main-run sample).")
     parser.add_argument("--cohort", default=None,
                         help="teams: restrict to one cohort (default: all analysable).")
     args = parser.parse_args(argv)
@@ -344,6 +448,8 @@ def main(argv: list[str] | None = None) -> None:
     if args.kind == "pilot":
         spec, key_df = build_pilot(df, crosswalk)
         _write_batch(spec, key_df, key_name="pilot_key.csv")
+    elif args.kind == "main":
+        build_main_run_sample(df, crosswalk)
     else:
         cohorts = [args.cohort] if args.cohort else list(ANALYSABLE)
         for c in cohorts:
