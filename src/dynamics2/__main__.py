@@ -116,7 +116,7 @@ def run_contested(records: list[MatrixRecord], states: pd.DataFrame,
         c = contested_mod.concentration_test(mat, key, n_perm=n_perm)
         base = {"csv_path": key[0], "team_name": key[1], "question_label": key[2]}
         fac_rows.append({**base, "n_raters": f.n_raters, "faction_size": f.faction_size,
-                        "modularity": f.modularity, "p_value": f.p_value,
+                        "split_quality": f.split_quality, "p_value": f.p_value,
                         "category": f.category})
         con_rows.append({**base, "n_disputed_recipients": c.n_disputed_recipients,
                         "gap": c.gap, "p_value": c.p_value, "verdict": c.verdict})
@@ -135,7 +135,7 @@ def run_contested(records: list[MatrixRecord], states: pd.DataFrame,
         p = contested_mod.pooled_faction_test(items, key=(csv_path, team_name), n_perm=n_perm)
         pool_rows.append({"csv_path": csv_path, "team_name": team_name,
                          "n_raters": p.n_raters, "faction_size": p.faction_size,
-                         "modularity": p.modularity, "p_value": p.p_value,
+                         "split_quality": p.split_quality, "p_value": p.p_value,
                          "category": p.category})
     pool_df = pd.DataFrame(pool_rows)
     _write(pool_df, "contested_factions_pooled.csv")

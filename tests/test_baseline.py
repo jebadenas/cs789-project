@@ -28,16 +28,20 @@ def _make_score_matrix(matrix: np.ndarray, **kwargs) -> ScoreMatrix:
 
 
 class TestBaselineAverage:
-    """Behavior: baseline_average computes the mean of all scores each student received."""
+    """Behavior: baseline_average is the self-excluded mean of scores received,
+    scaled to a team mean of 10.0 (audit 2026-08-09, Task 2). Scaling is a
+    per-team constant, so within-team ratios are preserved."""
 
     def test_3_person_team_returns_correct_iwf_and_model_name(self):
         """
         Tracer bullet: 3 students, asymmetric scores (self-scores excluded).
 
                   A(j=0)  B(j=1)  C(j=2)
-          A(i=0) [  10,      6,      8  ]   → mean (excl self) = (6+8)/2 = 7.0
-          B(i=1) [  12,     10,     14  ]   → mean (excl self) = (12+14)/2 = 13.0
-          C(i=2) [   8,     14,     12  ]   → mean (excl self) = (8+14)/2 = 11.0
+          A(i=0) [  10,      6,      8  ]   → peer mean = (6+8)/2 = 7.0
+          B(i=1) [  12,     10,     14  ]   → peer mean = (12+14)/2 = 13.0
+          C(i=2) [   8,     14,     12  ]   → peer mean = (8+14)/2 = 11.0
+
+        Peer means [7, 13, 11] have team mean 31/3; scaled to mean 10 by ×30/31.
         """
         matrix = np.array([
             [10,  6,  8],
@@ -49,14 +53,16 @@ class TestBaselineAverage:
 
         assert result.model_name == "Simple Average (Baseline)"
         assert len(result.students) == 3
+        scale = 30 / 31
         np.testing.assert_array_almost_equal(
-            result.iwf_vector, [7.0, 13.0, 11.0]
+            result.iwf_vector, np.array([7.0, 13.0, 11.0]) * scale
         )
+        assert result.iwf_vector.mean() == pytest.approx(10.0)
 
     def test_self_scores_are_excluded_from_average(self):
         """
-        Behavior: self-scores on the diagonal are NOT counted.
-        Student A's average is (6+8)/2 = 7.0 (excluding self-score of 10).
+        Behavior: self-scores on the diagonal are NOT counted; result then scaled
+        to team mean 10.0. Peer means [7, 10, 6.5] (mean 23.5/3) → ×30/23.5.
 
                   A(j=0)  B(j=1)  C(j=2)
           A(i=0) [  10,      6,      8  ]   → without self: (6+8)/2 = 7.0
@@ -71,14 +77,17 @@ class TestBaselineAverage:
 
         result = baseline_average(_make_score_matrix(matrix))
 
-        assert result.iwf_vector[0] == pytest.approx(7.0)
-        assert result.iwf_vector[1] == pytest.approx(10.0)
-        assert result.iwf_vector[2] == pytest.approx(6.5)
+        scale = 30 / 23.5
+        assert result.iwf_vector[0] == pytest.approx(7.0 * scale)
+        assert result.iwf_vector[1] == pytest.approx(10.0 * scale)
+        assert result.iwf_vector[2] == pytest.approx(6.5 * scale)
+        assert result.iwf_vector.mean() == pytest.approx(10.0)
 
     def test_non_submitter_excluded_from_mean_but_still_gets_iwf(self):
         """
         Behavior: NaN column (non-submitter) is skipped in the average,
-        self-scores are excluded, but the non-submitter's row still produces a valid IWF.
+        self-scores are excluded, but the non-submitter's row still produces a
+        valid IWF; the vector is then scaled to team mean 10.0.
 
                   A(j=0)  B(j=1)  C(j=2)  D(j=3)
           A(i=0) [  10,      8,     12,    NaN  ]   → excl self+NaN: (8+12)/2 = 10.0
@@ -86,8 +95,7 @@ class TestBaselineAverage:
           C(i=2) [   8,     12,     10,    NaN  ]   → excl self+NaN: (8+12)/2 = 10.0
           D(i=3) [   6,      6,      6,    NaN  ]   → excl self+NaN: (6+6+6)/3 = 6.0
 
-        D is a non-submitter (column all NaN). D still receives ratings
-        from A, B, C and gets an IWF of 6.0 (D's self-score is already NaN).
+        Peer means [10, 10, 10, 6] (mean 9.0) → scaled ×10/9.
         """
         matrix = np.array([
             [10,  8, 12, np.nan],
@@ -99,9 +107,11 @@ class TestBaselineAverage:
         result = baseline_average(_make_score_matrix(matrix))
 
         assert len(result.students) == 4
+        scale = 10 / 9
         np.testing.assert_array_almost_equal(
-            result.iwf_vector, [10.0, 10.0, 10.0, 6.0]
+            result.iwf_vector, np.array([10.0, 10.0, 10.0, 6.0]) * scale
         )
+        assert result.iwf_vector.mean() == pytest.approx(10.0)
 
     def test_uniform_scores_produce_equal_iwf(self):
         """Behavior: when everyone gives 10 to everyone, all IWFs equal 10.0."""

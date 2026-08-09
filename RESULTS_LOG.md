@@ -1,5 +1,36 @@
 # Results log
 
+- **2026-08-09 — Model-implementation audit fixes + downstream regeneration (handoff-9).**
+  Audited `src/models/` against primary sources. **Baseline** now scales to team
+  mean 10.0 (Task 2) — the one real numeric fix; it removes a scale offset that
+  was leaking into every cross-model Δ. **WebPA** normalisation implemented
+  canonically (÷ rater total incl self) and verified a **provable no-op** on this
+  fixed-budget instrument (rater sums incl self constant 417/417; output identical
+  to before, r=1.0000) — Task 1 was a false alarm that became a finding.
+  **PeerRank/PeerHITS**: deviations from Walsh/Kleinberg declared in docstrings
+  (no logic change); PeerHITS convergence confirmed on all 417 (max 78 iters).
+  Renamed `modularity`→`split_quality` in `dynamics2` (states unmoved). New
+  `src/audit/` regenerates Δ, RQ3 and attack-by-state to the parallel path
+  `output/audit_fix/` (pre-fix outputs untouched). 291 tests pass (+`test_audit_fixes.py`).
+  - **WebPA↔baseline** mean r **0.967** (median 0.987) — a *principled*
+    near-equivalence: on a fixed-budget instrument WebPA's normalisation is
+    redundant by design. All four models now team-mean exactly 10.0.
+  - **Δ overall** 0.427→**0.394** (−7.6%); **Δ-by-state median ordering unchanged**.
+  - **RQ3 survives:** clean row r +0.385→+0.380; team-level (n=84) +0.465→+0.443
+    (p<1e-4); **partial r −0.055→−0.038, still collapses** — shared-variance holds.
+  - **Tautology check (Task 8):** all-states KW H=212, p=3e-42, but **excluding
+    Silent it is NOT significant** (H=8.31, p=0.081, ε²=0.017; no pair survives
+    Holm). Only the *weak* triage claim is supported (Δ tracks presence, not type,
+    of structure).
+  - **Attack-by-state (Task 7):** the "no signal ⇒ manipulable" hypothesis is
+    **reversed** — Silent-flat has the lowest attack Δ (0.77), rising to One-at-top
+    (1.64); flat matrices are hard to move because already compressed.
+    Targeted-downvote is uniformly effective (~3.4); zero-self near-immune
+    post-fix. Files: `output/attacks/attack_by_state{,_permatrix}.csv`.
+  - **RQ1 side-effect:** scaling baseline makes it grade-neutral → now immune to
+    the *uniform* zero-self-full attack (was literal grade uplift); partial attack
+    still bites. Jos decides text changes; pre-fix numbers preserved.
+
 - **2026-08-09 — `src/dynamics2/` rank-based state cascade, permanent + tested (handoff-8).**
   Made the 2026-08-07 exploratory Lane B reproducible: new **additive** package
   `src/dynamics2/` (`src/dynamics/` untouched, both lanes runnable). Transforms

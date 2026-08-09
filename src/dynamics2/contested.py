@@ -54,12 +54,18 @@ def enumerate_partitions(m: int):
 
 
 def best_partition(tau_matrix: np.ndarray) -> tuple[float, int]:
-    """Max modularity ``Q`` over all 2-partitions of a rater×rater τ-b matrix.
+    """Max split-quality ``Q`` over all 2-partitions of a rater×rater τ-b matrix.
 
     ``Q = mean(τ within groups) − mean(τ between groups)``. A partition is scored
     only if it has ≥1 within-group pair *and* ≥1 between-group pair with a finite
     τ. Returns ``(max_Q, faction_size)`` where ``faction_size`` is the size of the
     smaller side of the winning partition; ``(nan, 0)`` if nothing is scorable.
+
+    NB: this is deliberately called **split_quality**, not *modularity*.
+    Newman–Girvan modularity is defined against a degree-preserving configuration
+    null; this quantity is a within-minus-between τ contrast evaluated against a
+    rating-permutation null — a different construction, null and quantity (audit
+    2026-08-09, Task 6).
     """
     m = tau_matrix.shape[0]
     best_q = -np.inf
@@ -117,7 +123,7 @@ def _faction_max_q(mat: np.ndarray) -> float:
 class FactionRow:
     n_raters: int
     faction_size: int
-    modularity: float
+    split_quality: float
     p_value: float
     category: str
 
@@ -134,7 +140,7 @@ def faction_test(mat: np.ndarray, key: tuple[str, str, str],
     res = permutation_p(mat, _faction_max_q, key=(*key, "faction"),
                         n_perm=n_perm, larger_is_extreme=True)
     category = _faction_category(res.p_value, size, alpha)
-    return FactionRow(n_raters, size, max_q, res.p_value, category)
+    return FactionRow(n_raters, size, max_q, res.p_value, category)  # max_q = split_quality
 
 
 def _faction_category(p: float, size: int, alpha: float) -> str:
@@ -199,7 +205,7 @@ def concentration_test(mat: np.ndarray, key: tuple[str, str, str],
 class PooledRow:
     n_raters: int
     faction_size: int
-    modularity: float
+    split_quality: float
     p_value: float
     category: str
 

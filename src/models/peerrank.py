@@ -19,6 +19,31 @@ def peerrank(
     Credibility weighting: a student rated poorly by peers has their votes
     dampened in subsequent iterations.
 
+    Deviations from Walsh (2014), declared (audit 2026-08-09, Task 3)
+    ----------------------------------------------------------------
+    ``alpha = 0.1`` is **not** a deviation — Walsh §6 uses α = β = 0.1 and states
+    the value is not critical, affecting convergence speed rather than the fixed
+    point. Four genuine deviations, each a defensible adaptation to
+    point-distribution data rather than a bug, are made explicit so §3/§4 can
+    state them:
+
+    1. **Score normalisation.** Walsh normalises grades to [0, 1]; here each
+       rater's column is normalised to sum 1 (a_ji = fraction of j's budget to i).
+       Adaptation to the fixed-budget instrument.
+    2. **Self-grades.** Walsh includes self-grades by default (notes they "can be
+       relaxed"); here the diagonal is zeroed, excluding self-assessment.
+    3. **Denominator.** Walsh's update divides by ``Σ_j X_j`` over all j; here the
+       sum is ``Σ_{j≠i} X_j``, consistent with dropping the self term (2).
+    4. **Initialisation.** Walsh sets ``X_i⁰ = (1/m) Σ_j A_{i,j}``; here the same
+       init is additionally renormalised (``X / X.sum()``). Harmless — Walsh notes
+       the initialisation is not critical to the fixed point.
+
+    Note on the performance claim: Walsh's headline result (assessment error
+    reduced by a factor of 2+) uses the **generalised** rule with the β
+    accuracy-reward term. That term is **not** implemented here (β = 0), so the
+    dissertation must not cite that performance figure as applying to this
+    variant. Implementing generalised PeerRank is future work.
+
     Args:
         score_matrix: N×N peer-assessment matrix (matrix[i][j] = score giver j
             gave to recipient i). NaN columns indicate non-submitters.
