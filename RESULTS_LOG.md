@@ -1,5 +1,38 @@
 # Results log
 
+- **2026-08-09 — `src/dynamics2/` rank-based state cascade, permanent + tested (handoff-8).**
+  Made the 2026-08-07 exploratory Lane B reproducible: new **additive** package
+  `src/dynamics2/` (`src/dynamics/` untouched, both lanes runnable). Transforms
+  each rater's ratings to within-rater normalised ranks (÷(k+1)) to divide out
+  leniency/severity/range, then runs a three-gate cascade — Gate A count
+  qualifying raters (Silent-flat / -lone-dissenter / -incomparable), Gate B mean
+  pairwise Kendall **τ-b** vs a per-rater permutation null (Contested), Gate C
+  bottom/top consensus-gap vs null (One at bottom / top / Both ends / No
+  standout). Every threshold is the null in `nulls.py` (add-one p, BLAKE2b-seeded
+  per (matrix, statistic), search-inside-null enforced by a matrix→scalar
+  callable). `contested.py` adds the faction (size-1 = lone deviant, not a
+  faction), concentration, and pooled team-level tests; `crossq.py` the
+  cross-question bottom consistency; plus the strong free-rider join.
+  Run `python3 -m src.dynamics2 --n-perm 1000` → `output/dynamics2/`
+  (matrix_states, contested_factions[_pooled], contested_concentration,
+  cross_question, strong_freerider_candidates); bit-for-bit reproducible.
+  - **States (417):** Silent **156** (87/61/8, exact) · Contested 99 · No standout
+    99 · One at bottom 37 · One at top **22** · Both ends **4**; clean Silent **42**.
+    Contested +9 / standouts −few vs the n_perm=100 exploratory, entirely the
+    add-one p-value tipping borderline-agreement matrices into Contested (expected).
+  - **Orthogonality (261 computable):** τ vs `mean_rater_std` **+0.055**,
+    reciprocity −0.124, asymmetry +0.122, gini +0.200 — exact; rank transform
+    leaks no rater effect. **Coverage 261/417 · 175/217** — exact.
+  - **Factions:** **1** genuine multi-person faction (pooled) + 4 lone-deviant;
+    per-matrix 2 genuine + 4 lone-deviant. The "Contested is noise not camps"
+    negative holds on three independent tests (>3 genuine would have overturned it).
+  - **Cross-question:** 93/139 readable, same bottom 3q/2q/1q = **31/39/23**,
+    mean τ **0.335** — exact. **One-at-bottom is 23 A0** (~3× base rate, exact).
+  - **New for §5.3:** **13 strong free-rider candidates** (same student bottom on
+    all three tasks *and* a significant bottom gap) — a number that did not exist
+    before. 17 new unit tests; full suite 275 passed. Whether this lane replaces
+    `dynamics` for §5.3 is Jos's call — no decision taken, nothing overturned.
+
 - **2026-08-06 — Codebook v2 + main-run sample (RQ3-EXT Step 4, handoff-7).**
   Applied the pilot findings (`notes/pilot-coding-findings.md` R1–R7) as codebook
   **v2** in `reader.py`: per-entry cut 5→3 fields (`teammate_content_valence`
