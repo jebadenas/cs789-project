@@ -110,16 +110,15 @@ class TestZeroSelf:
         part = zero_self(sm, full=False).matrix
         assert not np.allclose(full, part, equal_nan=True)
 
-    def test_full_uniform_uplift_cancelled_by_baseline_scaling(self):
-        # zero_self(full=True) scales every submitter column by the same factor —
-        # a pure uniform level shift. Since the fixed baseline scales to a team
-        # mean of 10.0 (audit 2026-08-09, Task 2), that level shift cancels and
-        # IWFs are unchanged: the grade-neutral baseline is immune to the uniform
-        # full attack, exactly like the normalising models below.
+    def test_full_is_uniform_uplift_preserving_rank(self):
+        # Under the institutional cs399 baseline (unscaled — handoff-9b), zero-self
+        # collusion injects surplus onto teammates as a genuine grade uplift with
+        # no loser: every weight rises, relative standing (rank) is preserved.
         sm = generate_team(5, seed=7).score_matrix
         before = _baseline_iwf(sm)
         after = _baseline_iwf(zero_self(sm, full=True))
-        np.testing.assert_allclose(after, before)
+        assert np.all(after > before)  # surplus injected → grade uplift
+        np.testing.assert_array_equal(np.argsort(after), np.argsort(before))
 
     def test_normalising_model_is_immune_to_full(self):
         # PeerRank normalises columns ⇒ uniform scaling cancels out.

@@ -11,8 +11,9 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
+from src.attacks.transforms import zero_self
 from src.dynamics2.dataio import load_matrices
-from src.models.baseline import baseline_average
+from src.models.baseline import baseline_cs399, baseline_normalised
 from src.models.peerhits import peerhits
 from src.models.peerrank import peerrank
 from src.models.webpa import webpa
@@ -81,16 +82,25 @@ class TestWebPANormalisation:
 # --------------------------------------------------------------------------- #
 
 class TestTeamMeanScaling:
+    """handoff-9b: cs399 keeps its (meaningful) level; normalised is exactly 10."""
 
-    def test_baseline_team_mean_is_ten_on_every_matrix(self):
-        for rec in load_matrices():
-            mean = float(np.nanmean(baseline_average(rec.sm).iwf_vector))
-            assert mean == pytest.approx(10.0), f"{rec.team_name}: baseline mean {mean}"
+    def test_cs399_mean_is_not_forced_to_ten(self):
+        """The institutional weight's level must be preserved — it genuinely
+        varies (the corpus ranges 7.50–14.00). At least some matrices ≠ 10."""
+        means = [float(np.nanmean(baseline_cs399(rec.sm).iwf_vector))
+                 for rec in load_matrices()]
+        assert any(abs(m - 10.0) > 0.05 for m in means)
 
-    def test_all_models_team_mean_is_ten(self):
-        """Regression guard for the Task 2 bug class: every model at mean 10.0."""
+    def test_normalised_baseline_mean_is_ten_on_every_matrix(self):
         for rec in load_matrices():
-            for name, fn in (("baseline", baseline_average), ("webpa", webpa),
+            mean = float(np.nanmean(baseline_normalised(rec.sm).iwf_vector))
+            assert mean == pytest.approx(10.0), f"{rec.team_name}: normalised mean {mean}"
+
+    def test_cross_model_registry_all_mean_ten(self):
+        """Δ regression guard: the models the Δ pipeline compares are all mean 10.0
+        (baseline via the normalised variant)."""
+        for rec in load_matrices():
+            for name, fn in (("baseline", baseline_normalised), ("webpa", webpa),
                              ("peerhits", peerhits)):
                 mean = float(np.nanmean(fn(rec.sm).iwf_vector))
                 assert mean == pytest.approx(10.0), f"{name} {rec.team_name}: mean {mean}"
@@ -104,6 +114,34 @@ class TestTeamMeanScaling:
 # --------------------------------------------------------------------------- #
 # Task 9 — PeerRank against Walsh's stated worked-example results
 # --------------------------------------------------------------------------- #
+
+class TestZeroSelfInflation:
+    """handoff-9b: whole-team zero-self collusion is a pure level inflation under
+    cs399 (+25% at N=5) and invisible to the normalised/relative view."""
+
+    def test_zero_self_full_gives_25pct_uplift_under_cs399_and_zero_relative(self):
+        # N=5 team, every rater distributes a full 10×5=50 budget including self.
+        matrix = np.array([
+            [10, 12,  8, 11,  9],
+            [12, 10, 13,  9, 10],
+            [ 9,  8, 10, 12, 11],
+            [11, 10,  9, 10, 12],
+            [ 8, 10, 10,  8,  8],
+        ], dtype=float)
+        assert np.allclose(matrix.sum(axis=0), 50)  # fixed 10×N budget incl self
+        sm = _mk(matrix)
+
+        before = baseline_cs399(sm).iwf_vector
+        after = baseline_cs399(zero_self(sm, full=True)).iwf_vector
+        # Absolute: every student's weight rises by exactly N/(N-1)=1.25 → +25%.
+        np.testing.assert_allclose(after, before * 1.25)
+        assert np.nanmean(after) == pytest.approx(np.nanmean(before) * 1.25)
+
+        # Relative: normalise both to mean 10 → identical (no loser, invisible).
+        bn = before / np.nanmean(before) * 10
+        an = after / np.nanmean(after) * 10
+        np.testing.assert_allclose(an, bn)
+
 
 class TestPeerRankWalshExamples:
 

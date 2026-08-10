@@ -1,5 +1,31 @@
 # Results log
 
+- **2026-08-10 — Reversed handoff-9 baseline scaling; zero-self is an inflation attack invisible to Δ (handoff-9b).**
+  Handoff-9 Task 2 (scale baseline to mean 10) **misrepresented the CS399
+  instrument** and made baseline look immune to zero-self collusion — an
+  artefact. Corrected: **split into two models.** `baseline_cs399` (unscaled,
+  self-excluded mean = `total_from_peers/(N−1)`, level meaningful) is the
+  institutional model and the default alias `baseline_average`; `baseline_normalised`
+  (mean 10) is used **only** for cross-model Δ (which measures relative standing).
+  The Δ registry points at `baseline_normalised`, so **Δ and all handoff-9
+  conclusions are unchanged** (RQ3 partial −0.038 still collapses; Δ-by-state
+  ordering unchanged; Silent-excluded tautology p=0.081, not significant).
+  New `src/audit/absolute.py` reports RQ1 attacks under absolute vs relative views.
+  - Instrument verified: 10·N budget incl self holds in **398/417 (95.4%)**
+    (N=6 324/324, N=5 74/93).
+  - **Zero-self-full is a pure inflation:** under cs399 every member's weight rises
+    **+25% (N=5) / +20% (N=6)** with **relative Δ = 0** and **no loser**;
+    **≈0 change in every mean-10 model** (webpa/peerrank/peerhits/baseline_normalised)
+    — structurally immune, which the relative-only analysis could not express.
+  - Transforms classified: **inflationary** = zero-self-full (pure), zero-self-partial
+    (+8%, mixed), uniform-inflation (+24%, mixed); **redistributive** =
+    targeted-downvote, single-outlier.
+  - **Detectability asymmetric:** N=6 inflation separable (natural max 10.88 <
+    implied 12.0); N=5 not (2/93 natural teams ≥12.5). Descriptive only — no team
+    labelled as colluding.
+  - Files: `output/attacks/attack_absolute_vs_relative.csv`,
+    `output/audit_fix/inflation_detectability{,_permatrix}.csv`. 288 tests pass.
+
 - **2026-08-09 — Model-implementation audit fixes + downstream regeneration (handoff-9).**
   Audited `src/models/` against primary sources. **Baseline** now scales to team
   mean 10.0 (Task 2) — the one real numeric fix; it removes a scale offset that

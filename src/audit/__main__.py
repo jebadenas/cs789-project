@@ -18,6 +18,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from src.audit import absolute as absmod
 from src.audit import attacks_by_state as ab
 from src.audit import regen
 from src.dynamics2.dataio import OUTPUT_DIR as DYN2_OUT
@@ -184,14 +185,41 @@ def run_attacks(n_perms: int = 100) -> None:
     _write(pd.DataFrame(stat_rows), OUT / "attack_by_state_stats.csv")
 
 
+def run_absolute(n_perms: int = 100) -> None:
+    """Tasks 3 & 4: RQ1 attacks under absolute vs relative views + detectability."""
+    print("Absolute-vs-relative attack analysis (handoff-9b Tasks 3/4)...", flush=True)
+    avr = absmod.absolute_vs_relative(n_perms=n_perms)
+    _write(avr, ATTACK_OUT / "attack_absolute_vs_relative.csv")
+
+    # Headline verification: zero-self-full under cs399.
+    zs = avr[(avr.attack == "zero-self-full") & (avr.model == "cs399")]
+    if not zs.empty:
+        print(f"  zero-self-full cs399: abs team-mean {zs.abs_teammean_pct.iloc[0]:+.2f}% "
+              f"| relative Δ {zs.rel_delta.iloc[0]:.4f}  (expect ~+22%, ~0)", flush=True)
+    for atk in avr["attack"].unique():
+        cls = avr[avr.attack == atk]["transform_class"].iloc[0]
+        print(f"    {atk:18s} → {cls}", flush=True)
+
+    det_df, det_summary = absmod.detectability()
+    _write(det_df, OUT / "inflation_detectability_permatrix.csv")
+    _write(pd.DataFrame(det_summary).T.reset_index().rename(columns={"index": "group"}),
+           OUT / "inflation_detectability.csv")
+    for grp, s in det_summary.items():
+        print(f"  {grp}: implied {s['implied_mean']:.2f}, "
+              f"{s['n_exceed_implied_naturally']}/{s['n_teams']} teams already ≥ implied; "
+              f"observed max {s['observed_max']:.2f}", flush=True)
+
+
 def main() -> None:
     cmd = sys.argv[1] if len(sys.argv) > 1 else "all"
     OUT.mkdir(parents=True, exist_ok=True)
     if cmd in ("delta", "all"):
         run_delta()
+    if cmd in ("absolute", "all"):
+        run_absolute()
     if cmd in ("attacks", "all"):
         run_attacks()
-    print(f"\nDone. Comparison artefacts in {OUT}/ and {ATTACK_OUT}/attack_by_state*.csv",
+    print(f"\nDone. Comparison artefacts in {OUT}/ and {ATTACK_OUT}/attack_*.csv",
           flush=True)
 
 
