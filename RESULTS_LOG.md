@@ -1,5 +1,27 @@
 # Results log
 
+- **2026-08-11 — Synthetic validation of the dynamics2 triage cascade (handoff-10).**
+  New `src/dynamics2/validate.py` (+ `tests/test_validate.py`, 14 pass) plants
+  **known team states** with `src/attacks/synthetic.py` extended to the CS399
+  form (10·N points/rater incl. self, diagonal populated), runs the **unmodified**
+  cascade, and scores recovery. 7 planted states × N∈{4,5,6} × 50 reps × 500
+  perms. Outputs → `output/dynamics2/validation/`: `confusion_raw.csv`,
+  `confusion_matrix.csv`, `headline_metrics.csv` (Task 2), `lazy_test.csv`
+  (Task 3), `power_curve.csv` (Task 4), `robustness.csv` (Task 5),
+  `realism_permatrix.csv` + `realism_summary.csv` (Task 6). Headlines (Wilson
+  CIs in file): **free-rider recall** 0/24/68% at N=4/5/6; **Even false-positive
+  into a standout 0.7%** (≪10% deploy trigger); **Contested recall 100% at
+  N≥5** (0% at N=4) — so the real-data faction null is *genuine, not a power
+  failure* — though Contested over-fires on Even/Disengaged teams (95/150 each),
+  making it a low-agreement flag rather than a faction proof. **Lazy-rater test:
+  cohesive vs disengaged are indistinguishable** (94 vs 94 Contested) —
+  demonstrates the cohesive/disengaged distinction is unrecoverable from a
+  matrix. **Detection floor:** only reliable N=6 crosses 50% (δ≈4), never 80%;
+  lazy ≈0 everywhere. **Realism:** generator is cleaner on coverage (0% Silent
+  vs 37% real; 100% vs 62.6% τ-coverage) but *not* easier on agreement (median
+  τ 0.47 vs 0.79), so recall figures are **upper bounds**; %Contested matches
+  real (23.5 vs 24.0). No changes to `src/dynamics2/` gate logic.
+
 - **2026-08-10 — Reversed handoff-9 baseline scaling; zero-self is an inflation attack invisible to Δ (handoff-9b).**
   Handoff-9 Task 2 (scale baseline to mean 10) **misrepresented the CS399
   instrument** and made baseline look immune to zero-self collusion — an
