@@ -62,17 +62,23 @@ def _redistribute(
 def uniform_inflation(sm: ScoreMatrix) -> ScoreMatrix:
     """#1 Pervasive collusion — every rater scores every recipient equally.
 
-    Each rater spreads their full budget evenly across the recipients they
-    rate (off-diagonal). Baseline IWF collapses to a single value (= the
+    Each rater spreads their **off-diagonal** budget evenly across the
+    recipients they rate. Baseline IWF collapses to a single value (= the
     per-recipient share); the peer-assessment signal is destroyed.
+
+    Diagonal convention: the attack is about how a rater rates *other
+    people*, not their self-allocation, so the self-score (the diagonal)
+    passes through unchanged. Only the off-diagonal mass is levelled, and
+    only the off-diagonal budget is spread — the self-share is neither
+    redistributed nor dropped.
     """
     m = sm.matrix.copy()
     n = m.shape[0]
     for j in _submitter_cols(m):
         recips = [i for i in range(n) if i != j]
-        budget = float(np.nansum(m[:, j]))
+        budget = float(np.nansum([m[i, j] for i in recips]))
         share = budget / len(recips)
-        col = np.full(n, np.nan)
+        col = m[:, j].copy()          # diagonal (self-score) passes through
         for i in recips:
             col[i] = share
         m[:, j] = col
@@ -89,10 +95,10 @@ def zero_self(
     """#2 Small-circle / zero-self collusion (full or partial 2-of-N).
 
     The IWF-specific exploit (proposal §3.4): a colluder awards self 0.
-    Self-scores are discarded but the IWF denominator stays N−1, so the
-    self-allocation is **injected as surplus** onto teammates — a grade
-    uplift with no contribution increase. This is *not* budget-conserving
-    by design; that injection is the attack.
+    Self-scores are discarded by baseline/PeerRank/PeerHITS but the IWF
+    denominator stays N−1, so the self-allocation is **injected as surplus**
+    onto teammates — a grade uplift with no contribution increase. This is
+    *not* budget-conserving by design; that injection is the attack.
 
     Each colluder's would-be self share is taken as ``self_share`` of the
     budget they distribute among N targets (default = an equal 1/N split,
@@ -102,6 +108,15 @@ def zero_self(
     submitter columns (or an explicit ``colluders`` list) form the circle.
     This is also the implementation home for reciprocal **log-rolling**
     (Song & Gehringer classify it as small-circle collusion).
+
+    Diagonal convention: the modelled attack is *"award self 0"*, so where a
+    self-score is present (real CS399 data) it is set to 0 — WebPA reads the
+    diagonal, and the earlier code scaled it up by ``factor``, which inflated
+    the self-score rather than zeroing it (the opposite of the attack). The
+    off-diagonal entries carry the injection (scaled by ``factor``). Where no
+    self-score is recorded (synthetic self-excluded form, diagonal NaN) there
+    is nothing to zero, so the diagonal is left NaN and only the off-diagonal
+    injection applies — identical to the prior behaviour for those inputs.
     """
     m = sm.matrix.copy()
     n = m.shape[0]
@@ -119,7 +134,12 @@ def zero_self(
         n / (n - 1) if self_share is None else 1.0 / (1.0 - self_share)
     )
     for j in colluders:
-        m[:, j] *= factor
+        col = m[:, j].copy()
+        self_present = np.isfinite(col[j])
+        col *= factor              # inject the freed self-share onto peers
+        if self_present:
+            col[j] = 0.0           # colluder awards self 0 (real CS399 data)
+        m[:, j] = col
     return _with_matrix(sm, m)
 
 
@@ -156,11 +176,14 @@ def single_outlier(
     *,
     rng: np.random.Generator | None = None,
 ) -> ScoreMatrix:
-    """#4 Single unreliable rater — one column randomly permuted.
+    """#4 Single unreliable rater — one column's peer scores randomly permuted.
 
-    One rater's allocation is replaced by a random permutation of the same
-    budget across the recipients they rate. Budget is conserved exactly
-    (it is a permutation). ``rng`` makes Monte-Carlo runs reproducible.
+    One rater's ratings of *other people* are replaced by a random
+    permutation of the same off-diagonal values. Budget is conserved exactly
+    across the off-diagonal entries (it is a permutation of them), and the
+    rater's own self-score (the diagonal) passes through unchanged — the
+    attack models unreliable rating of teammates, not a change to the
+    self-allocation. ``rng`` makes Monte-Carlo runs reproducible.
     """
     m = sm.matrix.copy()
     n = m.shape[0]
@@ -173,7 +196,7 @@ def single_outlier(
     recips = [i for i in range(n) if i != j]
     vals = np.array([m[i, j] for i in recips], dtype=float)
     perm = rng.permutation(vals)
-    col = np.full(n, np.nan)
+    col = m[:, j].copy()          # diagonal (self-score) passes through
     for i, v in zip(recips, perm):
         col[i] = v
     m[:, j] = col
