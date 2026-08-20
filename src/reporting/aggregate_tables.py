@@ -51,8 +51,10 @@ def _wrap(caption: str, label: str, colspec: str, header: str,
         f"    {header} \\\\", r"    \midrule",
     ]
     for r in body_rows:
-        # Bare table commands (e.g. \addlinespace) take no row terminator.
-        lines.append(f"    {r}" if r.startswith("\\") else f"    {r} \\\\")
+        # Bare table commands (e.g. \addlinespace) take no row terminator;
+        # anything containing an alignment tab is a data row and needs one.
+        is_bare_command = r.startswith("\\") and "&" not in r
+        lines.append(f"    {r}" if is_bare_command else f"    {r} \\\\")
     lines += [r"    \bottomrule", r"  \end{tabular}", r"\end{table}", ""]
     return "\n".join(lines)
 
@@ -111,9 +113,12 @@ def rq1_attacks_table(out: Path) -> Path:
         rows.pop()
 
     tex = _wrap(
-        "Mean Attack $\\Delta$ per attack $\\times$ model on real clean "
-        "matrices ($n{=}217$) versus the synthetic cohort. Lower is more "
-        "robust; $\\Delta{=}0$ denotes full immunity.",
+        "Mean Attack $\\Delta$ per attack $\\times$ model over all "
+        "$N{=}417$ real (team$\\times$question) matrices versus the "
+        "synthetic cohort. Lower is more robust; $\\Delta{=}0$ denotes no "
+        "effect on the model's weights. Self-score-reading WebPA is the most "
+        "robust to the peer-rating attacks but the only model that moves "
+        "under zero-self collusion.",
         "tab:rq1-attacks", "llrr", header, rows,
     )
     path = out / "table_rq1_attacks.tex"
