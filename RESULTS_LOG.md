@@ -1,5 +1,41 @@
 # Results log
 
+- **2026-08-20 — Pooled team-level cascade (handoff-11 B).**
+  New `src/dynamics2/pooled.py` mirrors the per-matrix gate cascade at team
+  level, keying rater vectors by `(recipient, question)` so N=4 teams (every one
+  `Silent-incomparable` per matrix) become comparable. Pooling primitive
+  `pooled_tau_matrix` moved out of `contested.py` (4c faction test reproduces
+  bit-for-bit, 66/66). New `pooled` command → `output/dynamics2/pooled/
+  team_states.csv` + `concordance.csv`; `validate.py` gains a 3-questions-per-team
+  arm → `output/dynamics2/validation/pooled_validation.csv`; `tests/test_pooled.py`
+  (7). **Synthetic free-rider recall N=4/5/6 pooled vs per-matrix-any-flag on the
+  same 3 questions: 0.72/0.94/0.96 vs 0.00/0.46/0.94** — pooling reads N=4
+  free-riders the per-matrix lane is 0% blind to and doubles N=5 recall, with
+  **pooled Even false-positive ≤4%** (calibrated). Single-question standout
+  recall (pooled) 0.00/0.06/0.06 — the expected dilution cost. **Real corpus
+  (139 teams, N=5/6): pooled vs any-flag agree 80/139**; readable-team
+  disagreement is directional (pooling resolves 25 low-power `Contested`→`No
+  standout`, dilutes 17 single-artefact standouts, promotes 16 to `Standout`) —
+  a construct difference (any-flag *max* vs pooled *average*), not a defect;
+  argues for keeping both lanes. Additive: `matrix_states.csv` and RQ4 tiers
+  untouched (pre-registration, B0). 325 tests pass.
+
+- **2026-08-20 — Attack-transform diagonal fix + RQ1 table regen (handoff-11 A).**
+  Fixed self-score (diagonal) handling in `src/attacks/transforms.py`
+  (`single_outlier`, `uniform_inflation`, `zero_self`; `targeted_downvote` was
+  correct) — WebPA reads the diagonal, so the old code mis-measured it.
+  `tests/test_transform_diagonal.py` (16). Re-ran attacks over all **417** real
+  matrices + synthetic → `output/attacks/attack_summary.csv`,
+  `attack_absolute_vs_relative.csv`; regenerated
+  `output/tables/table_rq1_attacks.tex` (caption n=217→N=417, model corrections
+  folded in). Corrected real numbers: **single-outlier WebPA 0.265 (was 0.784),
+  now the most robust — ratio 0.78 vs baseline**; **zero-self-full WebPA 0.625,
+  zero-self-partial 1.152 (were 0.000)** — WebPA is *not* immune to zero-self,
+  the old immunity was a whole-column scaling its normalisation cancels.
+  peerrank/peerhits/baseline diagonal-agnostic cells unchanged. Reverses §1.4
+  contribution 2 and narrows the handoff-9b zero-self immunity claim to
+  PeerRank/PeerHITS (prose is Jos's, A5). 325 tests pass.
+
 - **2026-08-11 — Synthetic validation of the dynamics2 triage cascade (handoff-10).**
   New `src/dynamics2/validate.py` (+ `tests/test_validate.py`, 14 pass) plants
   **known team states** with `src/attacks/synthetic.py` extended to the CS399

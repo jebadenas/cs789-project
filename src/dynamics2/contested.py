@@ -29,6 +29,7 @@ from src.dynamics2.dataio import MatrixRecord
 from src.dynamics2.nulls import (
     DEFAULT_N_PERM, permutation_p, permute_matrix, seed_from_key,
 )
+from src.dynamics2.pooled import pooled_tau_matrix
 
 ALPHA = 0.05
 MIN_FACTION_RATERS = 4  # below this the 2-partition search is not meaningful
@@ -210,42 +211,10 @@ class PooledRow:
     category: str
 
 
-def _pooled_tau_matrix(items: list[tuple[list[str], np.ndarray]],
-                       min_common: int = 3) -> tuple[np.ndarray, list[str]]:
-    """τ-b between raters over their common (recipient, question) keys.
-
-    ``items`` is one ``(emails, prepared_matrix)`` per readable question. Each
-    matrix is rank-transformed within (rater, question); a rater's pooled vector
-    is keyed by ``(recipient_email, question_index)``.
-    """
-    pooled: dict[str, dict[tuple[str, int], float]] = {}
-    for qi, (emails, mat) in enumerate(items):
-        R = ranks.normalised_rank_matrix(mat)
-        n, m = R.shape
-        for j in range(m):
-            rater = emails[j]
-            for i in range(n):
-                v = R[i, j]
-                if np.isfinite(v):
-                    pooled.setdefault(rater, {})[(emails[i], qi)] = float(v)
-    raters = sorted(pooled)
-    r = len(raters)
-    T = np.full((r, r), np.nan)
-    for a in range(r):
-        for b in range(a + 1, r):
-            va, vb = pooled[raters[a]], pooled[raters[b]]
-            common = sorted(set(va) & set(vb))
-            if len(common) < min_common:
-                continue
-            x = np.array([va[k] for k in common])
-            y = np.array([vb[k] for k in common])
-            t = ranks.tau_b(x, y)
-            T[a, b] = T[b, a] = t
-    return T, raters
-
-
 def _pooled_max_q(items: list[tuple[list[str], np.ndarray]]) -> float:
-    T, _ = _pooled_tau_matrix(items)
+    # ``pooled_tau_matrix`` is the shared pooling primitive (src/dynamics2/pooled.py);
+    # the pooled cascade and this faction test read the same rater×rater τ-b.
+    T, _ = pooled_tau_matrix(items)
     return best_partition(T)[0]
 
 
@@ -258,7 +227,7 @@ def pooled_faction_test(items: list[tuple[list[str], np.ndarray]],
     are shuffled independently — preserving the question structure. The full
     2-partition search is repeated inside the null.
     """
-    T, raters = _pooled_tau_matrix(items)
+    T, raters = pooled_tau_matrix(items)
     m = len(raters)
     if m < MIN_FACTION_RATERS:
         return PooledRow(m, 0, float("nan"), float("nan"), "too few raters")

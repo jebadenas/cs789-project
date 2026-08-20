@@ -9,6 +9,7 @@ Run:
     python3 -m src.dynamics2 gates --n-perm 200
     python3 -m src.dynamics2 contested
     python3 -m src.dynamics2 crossq
+    python3 -m src.dynamics2 pooled          # team-level pooled cascade (handoff-11 B)
 
 Outputs to output/dynamics2/:
     matrix_states.csv               — one row per team×question: gate cascade state
@@ -17,6 +18,8 @@ Outputs to output/dynamics2/:
     contested_factions_pooled.csv   — 4c team-level pooled faction test
     cross_question.csv              — per-team cross-question bottom consistency
     strong_freerider_candidates.csv — join: 3-question agreement + significant gap
+    pooled/team_states.csv          — one row per team: pooled team-level state
+    pooled/concordance.csv          — pooled state vs per-matrix any-flag collapse
 
 All outputs are seeded (BLAKE2b per matrix×statistic) and bit-for-bit
 reproducible across runs.
@@ -34,6 +37,7 @@ import pandas as pd
 from src.dynamics2 import contested as contested_mod
 from src.dynamics2 import crossq as crossq_mod
 from src.dynamics2 import gates as gates_mod
+from src.dynamics2 import pooled as pooled_mod
 from src.dynamics2 import ranks
 from src.dynamics2.dataio import (
     OUTPUT_DIR, MatrixRecord, load_aa_assignments, load_matrices,
@@ -223,12 +227,121 @@ def run_freeriders(states: pd.DataFrame, crossq_df: pd.DataFrame) -> pd.DataFram
 
 
 # --------------------------------------------------------------------------- #
+# Pooled team-level cascade (handoff-11 B) — additive; does not touch matrix_states
+# --------------------------------------------------------------------------- #
+
+STANDOUTS = {gates_mod.ONE_AT_BOTTOM, gates_mod.ONE_AT_TOP, gates_mod.BOTH_ENDS}
+SILENT_STATES_P = {gates_mod.SILENT_FLAT, gates_mod.SILENT_LONE,
+                   gates_mod.SILENT_INCOMPARABLE}
+
+
+def _anyflag_collapse(team_states: list[str]) -> str:
+    """Per-matrix any-flag team collapse (practical-check-design tiers): a team is
+    a Standout if any question is a standout, else Contested if any is Contested,
+    else No standout if any question is readable-but-flat, else Silent."""
+    if any(s in STANDOUTS for s in team_states):
+        return "Standout"
+    if any(s == gates_mod.CONTESTED for s in team_states):
+        return gates_mod.CONTESTED
+    if any(s == gates_mod.NO_STANDOUT for s in team_states):
+        return gates_mod.NO_STANDOUT
+    return "Silent"
+
+
+def _pooled_collapse(state: str) -> str:
+    """Collapse a pooled state to the same four buckets as the any-flag lane."""
+    if state in STANDOUTS:
+        return "Standout"
+    if state in SILENT_STATES_P:
+        return "Silent"
+    return state  # Contested / No standout
+
+
+def run_pooled(records: list[MatrixRecord], states: pd.DataFrame,
+               n_perm: int) -> pd.DataFrame:
+    """Pooled team-level state (B2) + concordance vs the any-flag collapse (B4).
+
+    One row per team. The real corpus is all N∈{5,6}; the pooled lane exists to
+    read N=4 teams the per-matrix cascade cannot, but there are none here, so on
+    this corpus the payoff is teams that move *out of Silent* under pooling.
+    """
+    teams = crossq_mod.group_by_team(records)
+    print(f"Pooled cascade over {len(teams)} teams (n_perm={n_perm})...", flush=True)
+
+    # Per-team any-flag collapse from the per-matrix states.
+    key_state = {(r.csv_path, r.team_name, r.question_label): r.state
+                 for r in states.itertuples()}
+
+    rows = []
+    for (csv_path, team_name), recs in sorted(teams.items()):
+        items = [([s.email for s in r.sm.students], ranks.prepare_matrix(r.sm))
+                 for r in recs]
+        ps = pooled_mod.classify_team(items, key=(csv_path, team_name), n_perm=n_perm)
+        per_matrix = [key_state[(csv_path, team_name, r.question_label)]
+                      for r in recs if (csv_path, team_name, r.question_label) in key_state]
+        anyflag = _anyflag_collapse(per_matrix)
+        rows.append({
+            "csv_path": csv_path, "team_name": team_name,
+            "n_members": ps.n_members, "n_readable_questions": len(recs),
+            "n_raters_pooled": ps.n_raters, "mean_tau": ps.mean_tau,
+            "bot_gap": ps.bot_gap, "top_gap": ps.top_gap,
+            "p_tau": ps.p_tau, "p_bot": ps.p_bot, "p_top": ps.p_top,
+            "pooled_state": ps.state,
+            "pooled_bucket": _pooled_collapse(ps.state),
+            "anyflag_bucket": anyflag,
+        })
+    df = pd.DataFrame(rows)
+    _write_pooled(df, "team_states.csv")
+
+    # Concordance cross-tab: pooled bucket × any-flag bucket.
+    order = ["Standout", gates_mod.CONTESTED, gates_mod.NO_STANDOUT, "Silent"]
+    ct = pd.crosstab(df["pooled_bucket"], df["anyflag_bucket"])
+    ct = ct.reindex(index=order, columns=order, fill_value=0)
+    _write_pooled(ct.reset_index(), "concordance.csv")
+
+    agree = int(sum(df["pooled_bucket"] == df["anyflag_bucket"]))
+    print(f"  Concordance: {agree}/{len(df)} teams agree on the collapsed bucket",
+          flush=True)
+    print("  pooled_bucket × anyflag_bucket:\n" + ct.to_string(), flush=True)
+
+    # Concrete gain: teams Silent under the per-matrix any-flag collapse that the
+    # pooled lane reads (moves out of Silent).
+    moved = df[(df["anyflag_bucket"] == "Silent") & (df["pooled_bucket"] != "Silent")]
+    print(f"  Moved OUT of Silent under pooling: {len(moved)} "
+          f"(→ {dict(Counter(moved['pooled_bucket']))})", flush=True)
+    _check_concordance_trigger(df)
+    return df
+
+
+def _check_concordance_trigger(df: pd.DataFrame) -> None:
+    """Stop-and-report: systematic disagreement means one lane is wrong (B4)."""
+    both_readable = df[(df["pooled_bucket"] != "Silent")
+                       & (df["anyflag_bucket"] != "Silent")]
+    if len(both_readable) >= 10:
+        disagree = int((both_readable["pooled_bucket"]
+                        != both_readable["anyflag_bucket"]).sum())
+        if disagree > len(both_readable) / 2:
+            print(f"  *** STOP-AND-REPORT: pooled and per-matrix lanes disagree on "
+                  f"{disagree}/{len(both_readable)} readable teams (>50%). One lane "
+                  f"is wrong — report the cross-tab, do not pick a winner. ***",
+                  file=sys.stderr, flush=True)
+
+
+# --------------------------------------------------------------------------- #
 # Helpers
 # --------------------------------------------------------------------------- #
 
 def _write(df: pd.DataFrame, name: str) -> None:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     path = OUTPUT_DIR / name
+    df.to_csv(path, index=False)
+    print(f"  Saved {path} ({len(df)} rows)", flush=True)
+
+
+def _write_pooled(df: pd.DataFrame, name: str) -> None:
+    out = OUTPUT_DIR / "pooled"
+    out.mkdir(parents=True, exist_ok=True)
+    path = out / name
     df.to_csv(path, index=False)
     print(f"  Saved {path} ({len(df)} rows)", flush=True)
 
@@ -281,14 +394,18 @@ def main() -> None:
         run_contested(records, states, n_perm)
     elif cmd == "crossq":
         run_crossq(records)
+    elif cmd == "pooled":
+        states = _load_states()
+        run_pooled(records, states, n_perm)
     elif cmd in ("all", "freeriders"):
         states = run_gates(records, n_perm)
         run_contested(records, states, n_perm)
         cq = run_crossq(records)
         run_freeriders(states, cq)
+        run_pooled(records, states, n_perm)
     else:
-        print(f"Unknown command {cmd!r}. Choose from: gates, contested, crossq, all",
-              file=sys.stderr)
+        print(f"Unknown command {cmd!r}. Choose from: gates, contested, crossq, "
+              f"pooled, all", file=sys.stderr)
         sys.exit(1)
 
     print(f"\nDone. Outputs in {OUTPUT_DIR}/", flush=True)

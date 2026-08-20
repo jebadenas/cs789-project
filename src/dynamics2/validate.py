@@ -416,6 +416,140 @@ def _write(df: pd.DataFrame, name: str) -> None:
     print(f"  Saved {OUT / name} ({len(df)} rows)", flush=True)
 
 
+# --------------------------------------------------------------------------- #
+# Pooled-lane validation (handoff-11 B3) — the gate on Workstream B
+# --------------------------------------------------------------------------- #
+
+from src.dynamics2 import pooled as pooled_mod  # noqa: E402
+
+NQ = 3  # questions per team (code / report / poster), what pooling pools
+
+
+def _team_items(n: int, seed: int, contributions=None, *, profile="reliable",
+                nq: int = NQ):
+    """``nq`` question-matrices for one team (same members, independent noise).
+
+    A team-level planted state is planted **consistently across all questions**:
+    same contribution vector, ``nq`` independent noise draws (seed + question).
+    Returns the pooled-lane ``items`` = [(emails, prepared_matrix), ...].
+    """
+    items = []
+    for q in range(nq):
+        team = _team(n, seed + 1000 * q, contributions=contributions, profile=profile)
+        emails = [s.email for s in team.score_matrix.students]
+        items.append((emails, ranks.prepare_matrix(team.score_matrix)))
+    return items
+
+
+def _team_items_single_q(n: int, seed: int, contributions, *, profile="reliable",
+                         nq: int = NQ):
+    """Standout in **one** question only; the other ``nq−1`` are Even.
+
+    This is the case the pooled lane may wash out and the per-matrix lane would
+    catch — the expected cost of pooling (B3 point 4)."""
+    even = np.full(n, MU0)
+    items = []
+    for q in range(nq):
+        c = contributions if q == 0 else even
+        team = _team(n, seed + 1000 * q, contributions=c, profile=profile)
+        emails = [s.email for s in team.score_matrix.students]
+        items.append((emails, ranks.prepare_matrix(team.score_matrix)))
+    return items
+
+
+@dataclass(frozen=True)
+class RecoveredPooled:
+    state: str
+    bottom_member: int
+    top_member: int
+    n_raters: int
+
+
+def classify_pooled(items, key: tuple[str, str], n_perm: int) -> RecoveredPooled:
+    """Run the pooled cascade; identify the implicated member from pooled consensus."""
+    ps = pooled_mod.classify_team(items, key=key, n_perm=n_perm)
+    cons = pooled_mod.pooled_consensus(items)          # email -> mean rank
+    emails = items[0][0]
+    idx = {e: i for i, e in enumerate(emails)}
+    if cons:
+        bottom = idx[min(cons, key=cons.get)]
+        top = idx[max(cons, key=cons.get)]
+    else:
+        bottom = top = -1
+    return RecoveredPooled(ps.state, bottom, top, ps.n_raters)
+
+
+def _permatrix_anyflag(items, key: tuple[str, str], n_perm: int) -> RecoveredPooled:
+    """Per-matrix lane on the same questions, collapsed by any-flag — the matched
+    baseline the pooled lane must beat at N=4. A standout is 'recovered' if any
+    single question yields it (with the implicated member from that question)."""
+    best = RecoveredPooled("Silent", -1, -1, 0)
+    rank = {gates.SILENT_FLAT: 0, gates.SILENT_LONE: 0, gates.SILENT_INCOMPARABLE: 0,
+            gates.NO_STANDOUT: 1, gates.CONTESTED: 2,
+            gates.ONE_AT_TOP: 3, gates.ONE_AT_BOTTOM: 3, gates.BOTH_ENDS: 3}
+    for qi, (emails, mat) in enumerate(items):
+        row = gates.classify_matrix(mat, (str(key), str(qi), "q"), n_perm=n_perm)
+        cons = ranks.consensus_vector(mat)
+        finite = np.isfinite(cons)
+        bot = int(np.nanargmin(np.where(finite, cons, np.nan))) if finite.any() else -1
+        top = int(np.nanargmax(np.where(finite, cons, np.nan))) if finite.any() else -1
+        if rank.get(row.state, 0) > rank.get(best.state, 0):
+            best = RecoveredPooled(row.state, bot, top, row.n_raters)
+    return best
+
+
+def run_pooled_validation(replicates: int, n_perm: int, delta: float = 7.0,
+                          base_seed: int = 400_000, progress: bool = True) -> pd.DataFrame:
+    """B3: pooled vs per-matrix at N=4,5,6 — FP on Even, free-rider recall (all-3
+    and single-question arms). N=4 is the point: the per-matrix lane is 0% there."""
+    rows = []
+    for n in SIZES:
+        fp_pool = fp_pm = 0
+        fr_state = fr_member = 0
+        pm_state = pm_member = 0
+        sq_member = 0
+        for rep in range(replicates):
+            tgt = rep % n
+            se = base_seed + n * 10_000 + rep
+            key = (f"val-N{n}", f"rep{rep}")
+
+            # Even arm — false-positive calibration (the decisive check).
+            even_items = _team_items(n, se, np.full(n, MU0))
+            fp_pool += classify_pooled(even_items, key, n_perm).state in STANDOUTS
+            fp_pm += _permatrix_anyflag(even_items, key, n_perm).state in STANDOUTS
+
+            # Free-rider planted on all three questions.
+            c = np.full(n, MU0); c[tgt] = MU0 - delta
+            fr_items = _team_items(n, se + 5, c)
+            rp = classify_pooled(fr_items, key, n_perm)
+            fr_state += rp.state == gates.ONE_AT_BOTTOM
+            fr_member += rp.state == gates.ONE_AT_BOTTOM and rp.bottom_member == tgt
+            rm = _permatrix_anyflag(fr_items, key, n_perm)
+            pm_state += rm.state == gates.ONE_AT_BOTTOM
+            pm_member += rm.state == gates.ONE_AT_BOTTOM and rm.bottom_member == tgt
+
+            # Single-question standout — the expected dilution cost.
+            sq_items = _team_items_single_q(n, se + 11, c)
+            rq = classify_pooled(sq_items, key, n_perm)
+            sq_member += rq.state == gates.ONE_AT_BOTTOM and rq.bottom_member == tgt
+        R = replicates
+        for lane, metric, k in (
+            ("pooled", "Even false-positive", fp_pool),
+            ("per-matrix", "Even false-positive", fp_pm),
+            ("pooled", "free-rider member+state recall", fr_member),
+            ("pooled", "free-rider state recall", fr_state),
+            ("per-matrix", "free-rider member+state recall", pm_member),
+            ("per-matrix", "free-rider state recall", pm_state),
+            ("pooled", "single-question free-rider recall", sq_member),
+        ):
+            p, lo, hi = wilson(k, R)
+            rows.append({"lane": lane, "metric": metric, "N": n, "k": k, "n": R,
+                        "rate": p, "wilson_lo": lo, "wilson_hi": hi})
+        if progress:
+            print(f"  pooled validation: N={n} done", file=sys.stderr, flush=True)
+    return pd.DataFrame(rows)
+
+
 def main() -> None:
     argv = sys.argv[1:]
     cmd = argv[0] if argv and not argv[0].startswith("-") else "all"
@@ -448,6 +582,18 @@ def main() -> None:
         _write(comp, "realism_permatrix.csv")
         _write(summ, "realism_summary.csv")
         print(summ.to_string(index=False), flush=True)
+    if cmd in ("pooled", "all"):
+        pv = run_pooled_validation(reps, n_perm)
+        _write(pv, "pooled_validation.csv")
+        piv = pv.pivot_table(index=["metric", "lane"], columns="N", values="rate")
+        print(piv.round(3).to_string(), flush=True)
+        # Decisive calibration check (B3 point 1).
+        even_fp = pv[(pv.lane == "pooled") & (pv.metric == "Even false-positive")]
+        worst = float(even_fp["rate"].max())
+        if worst > 0.05:
+            print(f"  *** STOP-AND-REPORT: pooled Even false-positive {worst:.1%} "
+                  f"> 5% — the pooled null is mis-calibrated; recall figures are "
+                  f"not trustworthy. ***", file=sys.stderr, flush=True)
 
     print(f"\nDone. Validation artefacts in {OUT}/", flush=True)
 
