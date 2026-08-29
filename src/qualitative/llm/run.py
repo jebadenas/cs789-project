@@ -19,14 +19,21 @@ def run_notes(cohorts: list[str], num_ctx: int) -> None:
     tasks = [(c, t) for c in cohorts for t in blobs.team_labels(c)]
     total = len(tasks)
     print(f"notes: {total} teams across {cohorts}", flush=True)
+    failed = []
     for i, (cohort, team) in enumerate(tasks, 1):
         t0 = time.time()
         out = notes._OUT / f"{cohort}_{team}.json"
         done = out.exists()
-        notes.run_team(cohort, team, num_ctx=num_ctx)
-        tag = "skip" if done else f"{time.time() - t0:.0f}s"
+        try:
+            notes.run_team(cohort, team, num_ctx=num_ctx)
+            tag = "skip" if done else f"{time.time() - t0:.0f}s"
+        except Exception as e:  # one bad team must not kill the batch — it's resumable
+            failed.append((cohort, team))
+            tag = f"FAILED after {time.time() - t0:.0f}s: {type(e).__name__}"
         print(f"  [{i}/{total}] {cohort} {team}  ({tag})", flush=True)
-    print("notes: complete", flush=True)
+    print(f"notes: complete — {total - len(failed)}/{total} ok, {len(failed)} failed", flush=True)
+    if failed:
+        print("  failed (re-run to retry): " + ", ".join(f"{c}/{t}" for c, t in failed), flush=True)
 
 
 def main(argv: list[str] | None = None) -> None:

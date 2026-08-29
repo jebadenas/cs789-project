@@ -18,6 +18,9 @@ OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434")
 # OpenAI-compatible endpoint — vLLM on the cluster now; Gemini's compat URL later.
 OPENAI_BASE_URL = os.environ.get("OPENAI_BASE_URL", "http://localhost:8000/v1")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "EMPTY")  # vLLM ignores the key
+# Big blobs (up to ~67k tokens) can prefill for many minutes on a small local
+# model — keep this generous so slow teams don't spuriously time out.
+TIMEOUT = int(os.environ.get("LLM_TIMEOUT", "1800"))
 
 
 def call_model(
@@ -66,7 +69,7 @@ def _openai(prompt, system, temperature, max_tokens, model) -> str:
             "Authorization": f"Bearer {OPENAI_API_KEY}",
         },
     )
-    with urllib.request.urlopen(req, timeout=600) as resp:
+    with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
         body = json.load(resp)
     return body["choices"][0]["message"]["content"]
 
@@ -87,6 +90,6 @@ def _ollama(prompt, system, temperature, num_ctx, model) -> str:
         data=json.dumps(payload).encode(),
         headers={"Content-Type": "application/json"},
     )
-    with urllib.request.urlopen(req, timeout=600) as resp:
+    with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
         body = json.load(resp)
     return body["message"]["content"]
