@@ -23,7 +23,7 @@ cd "$PROJECT"
 source .venv/bin/activate
 
 vllm serve "$MODEL_DIR" --served-model-name qwen72b --quantization awq_marlin \
-    --max-model-len 49152 --gpu-memory-utilization 0.92 --max-num-seqs 4 --port "$PORT" &
+    --max-model-len 73728 --gpu-memory-utilization 0.92 --max-num-seqs 2 --port "$PORT" &
 VLLM_PID=$!
 trap 'kill $VLLM_PID 2>/dev/null || true' EXIT
 

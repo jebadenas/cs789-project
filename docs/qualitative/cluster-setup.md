@@ -36,8 +36,8 @@ pip install --proxy $https_proxy vllm pandas pyarrow
 ## 3. Download the model (~40 GB, via proxy) **[you]**
 
 ```bash
-huggingface-cli download Qwen/Qwen2.5-72B-Instruct-AWQ \
-    --local-dir /data/$USER/models/qwen72b-awq
+# newer huggingface_hub uses `hf` (old `huggingface-cli` is deprecated)
+hf download Qwen/Qwen2.5-72B-Instruct-AWQ --local-dir /data/$USER/models/qwen72b-awq
 ```
 
 ## 4. Copy the data up — **pseudonymised only, NEVER the crosswalk** **[you]**
