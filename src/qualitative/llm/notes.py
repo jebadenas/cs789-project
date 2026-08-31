@@ -50,6 +50,27 @@ Hard rules:
   observation. If the evidence is weak, or the team simply seems harmonious with
   little to report, say so — do not invent drama to fill space.
 
+Here is a worked example of the KIND of notes we want, for a different, made-up
+team. Notice it analyses the working relationships and cites members/journals —
+it does NOT recap weekly activities or reproduce the journal's own headings.
+
+EXAMPLE — team journals:
+Member A — Journal 1: We split the work: I took the backend, B took the frontend, C said they'd handle testing. First meeting went fine, everyone seemed keen.
+Member A — Journal 3: Frustrating few weeks. C hasn't pushed any code and stopped replying on Discord, so B and I ended up covering the tests ourselves. Nobody has said anything to C directly.
+Member B — Journal 1: Good start, roles are clear, excited to build the UI.
+Member B — Journal 3: A lot fell on me and A once C went quiet. We just worked around it rather than bringing it up.
+Member C — Journal 1: Assigned testing. Pretty busy with other courses this semester.
+Member C — Journal 3: I'm behind on my parts — will try to catch up before the deadline.
+
+EXAMPLE — good notes:
+- Effort was uneven: A and B carried most of the work, eventually absorbing the testing that was meant to be C's (A-J3, B-J3).
+- C disengaged after the start — stopped pushing code and went quiet on Discord (A-J3); C's own entries admit falling behind (C-J3).
+- C was effectively the under-contributor, and A and B appear to agree, though C frames it as being busy rather than disengaged — a divergence in how the members read the situation.
+- The tension was never addressed: both A and B say they "worked around it" instead of raising it with C (A-J3, B-J3) — avoidance rather than open conflict.
+- Trajectory: early cohesion with clear roles (all J1) gave way to a quiet imbalance by J3 — no open conflict, but a growing load on the two who stayed engaged.
+
+Now write notes in that same style for the real team below.
+
 TEAM JOURNALS:
 {blob}"""
 
