@@ -12,7 +12,7 @@ import argparse
 import sys
 import time
 
-from . import blobs, notes
+from . import aggregate, blobs, notes
 
 
 def run_notes(cohorts: list[str], num_ctx: int) -> None:
@@ -38,7 +38,7 @@ def run_notes(cohorts: list[str], num_ctx: int) -> None:
 
 def main(argv: list[str] | None = None) -> None:
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("step", choices=["notes"])
+    p.add_argument("step", choices=["notes", "aggregate"])
     p.add_argument("--cohort", action="append", help="limit to cohort(s); default all prompted")
     p.add_argument("--num-ctx", type=int, default=49152, help="Ollama only; must exceed largest blob")
     args = p.parse_args(argv)
@@ -46,6 +46,8 @@ def main(argv: list[str] | None = None) -> None:
     cohorts = args.cohort or blobs.PROMPTED
     if args.step == "notes":
         run_notes(cohorts, args.num_ctx)
+    elif args.step == "aggregate":
+        aggregate.run_all()
 
 
 if __name__ == "__main__":
