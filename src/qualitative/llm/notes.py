@@ -46,6 +46,9 @@ Hard rules:
   finishing others' work).
 - Do NOT organise your answer by week or as a timeline. Write a flat list of
   dynamic observations.
+- Report only the 6-10 MOST important observations — the ones that best
+  characterise this team's dynamics. Prefer a few high-signal points over an
+  exhaustive list; do not pad with minor or repetitive notes.
 - Stay close to the text and cite the member(s) and journal(s) behind each
   observation. If the evidence is weak, or the team simply seems harmonious with
   little to report, say so — do not invent drama to fill space.
