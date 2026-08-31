@@ -24,6 +24,8 @@ cd "$PROJECT"
 source .venv/bin/activate
 # /home is capped at 100MB — keep every cache on /data or runtime writes fail
 export HOME=/data/$USER TMPDIR=/data/$USER/tmp HF_HOME=/data/$USER/hf XDG_CACHE_HOME=/data/$USER/.cache
+# the node has http_proxy set; reach the LOCAL vLLM directly, not via squid
+export no_proxy="localhost,127.0.0.1" NO_PROXY="localhost,127.0.0.1"
 
 # --- start vLLM (OpenAI-compatible server), loads the model once -------------
 vllm serve "$MODEL_DIR" \
