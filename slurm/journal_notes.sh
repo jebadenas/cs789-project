@@ -22,6 +22,8 @@ PORT=8000
 
 cd "$PROJECT"
 source .venv/bin/activate
+# /home is capped at 100MB — keep every cache on /data or runtime writes fail
+export HOME=/data/$USER TMPDIR=/data/$USER/tmp HF_HOME=/data/$USER/hf XDG_CACHE_HOME=/data/$USER/.cache
 
 # --- start vLLM (OpenAI-compatible server), loads the model once -------------
 vllm serve "$MODEL_DIR" \

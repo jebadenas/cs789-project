@@ -23,6 +23,8 @@ PORT=8000
 
 cd "$PROJECT"
 source .venv/bin/activate
+# /home is capped at 100MB — keep every cache on /data or runtime writes fail
+export HOME=/data/$USER TMPDIR=/data/$USER/tmp HF_HOME=/data/$USER/hf XDG_CACHE_HOME=/data/$USER/.cache
 
 vllm serve "$MODEL_DIR" --served-model-name qwen72b --quantization awq_marlin \
     --hf-overrides '{"rope_scaling":{"rope_type":"yarn","factor":4.0,"original_max_position_embeddings":32768}}' \
