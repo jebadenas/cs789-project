@@ -12,7 +12,7 @@ import argparse
 import sys
 import time
 
-from . import aggregate, blobs, notes
+from . import aggregate, blobs, marking, notes
 
 
 def run_notes(cohorts: list[str], num_ctx: int) -> None:
@@ -36,9 +36,31 @@ def run_notes(cohorts: list[str], num_ctx: int) -> None:
         print("  failed (re-run to retry): " + ", ".join(f"{c}/{t}" for c, t in failed), flush=True)
 
 
+def run_mark(cohorts: list[str], runs: int = 3) -> None:
+    teams = [(c, t) for c in cohorts for t in blobs.team_labels(c)]
+    tasks = [(r, c, t) for r in range(runs) for (c, t) in teams]  # run-major
+    total = len(tasks)
+    print(f"mark: {len(teams)} teams x {runs} runs = {total}", flush=True)
+    failed = []
+    for i, (r, cohort, team) in enumerate(tasks, 1):
+        t0 = time.time()
+        out = marking._OUT / f"{cohort}_{team}_r{r}.json"
+        done = out.exists()
+        try:
+            marking.run_team(cohort, team, r)
+            tag = "skip" if done else f"{time.time() - t0:.0f}s"
+        except Exception as e:
+            failed.append((cohort, team, r))
+            tag = f"FAILED: {type(e).__name__}"
+        print(f"  [{i}/{total}] r{r} {cohort} {team}  ({tag})", flush=True)
+    print(f"mark: complete — {total - len(failed)}/{total} ok, {len(failed)} failed", flush=True)
+    if failed:
+        print("  failed (re-run to retry): " + ", ".join(f"{c}/{t}/r{r}" for c, t, r in failed), flush=True)
+
+
 def main(argv: list[str] | None = None) -> None:
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("step", choices=["notes", "aggregate"])
+    p.add_argument("step", choices=["notes", "aggregate", "mark"])
     p.add_argument("--cohort", action="append", help="limit to cohort(s); default all prompted")
     p.add_argument("--num-ctx", type=int, default=49152, help="Ollama only; must exceed largest blob")
     args = p.parse_args(argv)
@@ -48,6 +70,8 @@ def main(argv: list[str] | None = None) -> None:
         run_notes(cohorts, args.num_ctx)
     elif args.step == "aggregate":
         aggregate.run_all()
+    elif args.step == "mark":
+        run_mark(cohorts)
 
 
 if __name__ == "__main__":

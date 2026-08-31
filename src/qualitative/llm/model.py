@@ -30,6 +30,7 @@ def call_model(
     temperature: float = 0.2,
     num_ctx: int = 32768,
     max_tokens: int = 1500,
+    response_format: dict | None = None,
     backend: str | None = None,
     model: str | None = None,
 ) -> str:
@@ -46,11 +47,11 @@ def call_model(
     if backend == "ollama":
         return _ollama(prompt, system, temperature, num_ctx, model or MODEL)
     if backend == "openai":
-        return _openai(prompt, system, temperature, max_tokens, model or MODEL)
+        return _openai(prompt, system, temperature, max_tokens, response_format, model or MODEL)
     raise NotImplementedError(f"backend {backend!r} not wired up yet")
 
 
-def _openai(prompt, system, temperature, max_tokens, model) -> str:
+def _openai(prompt, system, temperature, max_tokens, response_format, model) -> str:
     messages = []
     if system:
         messages.append({"role": "system", "content": system})
@@ -61,6 +62,8 @@ def _openai(prompt, system, temperature, max_tokens, model) -> str:
         "temperature": temperature,
         "max_tokens": max_tokens,
     }
+    if response_format is not None:
+        payload["response_format"] = response_format
     req = urllib.request.Request(
         f"{OPENAI_BASE_URL}/chat/completions",
         data=json.dumps(payload).encode(),

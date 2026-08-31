@@ -61,19 +61,33 @@ def _entries(cohort: str) -> pd.DataFrame:
     return ents.merge(text, on="submission_id", how="left")
 
 
-def build_blob(cohort: str, team_label: str) -> str:
-    """One structured blob for a team: members A..F, each journal in order."""
+def build_blob(cohort: str, team_label: str, seed: int | None = None) -> str:
+    """One structured blob for a team: members A..F, each journal in order.
+
+    With ``seed`` set, the members are randomly re-labelled and re-ordered
+    (deterministically per team+seed) — used by marking to run 3x so a mark can't
+    depend on which member happens to be "A" or appears first.
+    """
+    import random
+
     df = _entries(cohort)
-    team = df[df["team_label"] == team_label].sort_values(
-        ["member_label", "journal_index"]
-    )
-    parts: list[str] = []
+    team = df[df["team_label"] == team_label]
+    members = sorted(team["member_label"].dropna().unique())
+    if seed is None:
+        relabel = {m: m for m in members}
+    else:
+        order = list(members)
+        random.Random(f"{cohort}:{team_label}:{seed}").shuffle(order)
+        relabel = {orig: chr(ord("A") + i) for i, orig in enumerate(order)}
+
+    rows = []
     for _, r in team.iterrows():
         body = (r["text"] or "").strip()
         if not body:
             continue
-        parts.append(f"Member {r['member_label']} — Journal {r['journal_index']}:\n{body}")
-    return "\n\n".join(parts)
+        rows.append((relabel[r["member_label"]], int(r["journal_index"]), body))
+    rows.sort(key=lambda x: (x[0], x[1]))
+    return "\n\n".join(f"Member {lbl} — Journal {ji}:\n{body}" for lbl, ji, body in rows)
 
 
 def team_labels(cohort: str) -> list[str]:
