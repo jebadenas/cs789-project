@@ -23,7 +23,7 @@ cd "$PROJECT"
 source .venv/bin/activate
 
 vllm serve "$MODEL_DIR" --served-model-name qwen72b --quantization awq_marlin \
-    --rope-scaling '{"rope_type":"yarn","factor":4.0,"original_max_position_embeddings":32768}' \
+    --hf-overrides '{"rope_scaling":{"rope_type":"yarn","factor":4.0,"original_max_position_embeddings":32768}}' \
     --max-model-len 73728 --gpu-memory-utilization 0.92 --max-num-seqs 2 --port "$PORT" &
 VLLM_PID=$!
 trap 'kill $VLLM_PID 2>/dev/null || true' EXIT
