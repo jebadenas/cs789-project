@@ -34,9 +34,8 @@ matplotlib.use("Agg")
 import pandas as pd
 
 from src.parsing.parser import parse_session_with_diagnostics
-from src.labelling.cards import (
-    LABEL_HINTS, QUESTIONS, VALID_LABELS, _render_card,
-)
+from src.labelling.constants import LABEL_HINTS, QUESTIONS, VALID_LABELS
+from src.labelling.cards import _render_card
 
 OUT = Path("output/labelling")
 

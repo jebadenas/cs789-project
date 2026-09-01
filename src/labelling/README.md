@@ -22,6 +22,13 @@ python3 -m src.labelling.ui              # -> label_ui.html (self-contained)
 
 # 4. (after two raters fill sheets) score agreement
 python3 -m src.labelling.kappa rater_A.csv rater_B.csv
+
+# 5a. descriptive summary of ONE sheet (archetype-blind; safe before freeze)
+python3 -m src.labelling.summary output/labelling/labels_<rater>.csv
+
+# 5b. naming + external-validity cross-tabs (POST-FREEZE ONLY)
+python3 -m src.labelling.naming output/labelling/labels_<rater>.csv \
+    [--second output/labelling/labels_<rater2>.csv]
 ```
 
 `sample.py` auto-generates the assignments file if you skip step 1; `ui.py`
@@ -65,6 +72,26 @@ second human isn't available.
 
 **Freeze** the labelled sheets before looking at how they line up with the
 clusters (rubric §3.8) — no relabelling after seeing the validation.
+
+## Analysis scripts
+
+- **`summary.py`** — descriptive summary of a *single* rater sheet (label &
+  confidence distributions, secondary/per-question usage, a presentation-order
+  drift check). Imports **no** archetype data (not `card_key.csv`,
+  `labelling_sample.csv`, `aa_k4_assignments.csv`, or `src/dynamics`), so it is
+  safe to run **before the freeze** without contaminating a test–retest. Writes
+  `summary_<rater>.csv`.
+- **`naming.py`** — **post-freeze** validation. Joins labels →
+  `card_key.csv` → `labelling_sample.csv` and reports: primary_label × flag
+  (headline), primary_label × archetype (raw counts; % suppressed for cells
+  < 8; no χ² — cells are single-digit), ARI/NMI partition agreement, a
+  high-confidence sensitivity pass, and the modal-label-per-archetype naming
+  table. `--second` reports a second rater separately (or uses an
+  `adjudicated_label` column if present). Writes `naming_crosstab.csv`,
+  `naming_agreement.csv`.
+
+Running order for reliability + naming, once labels exist: `kappa.py` (κ) →
+freeze → `naming.py`. Taxonomy/columns are centralised in `constants.py`.
 
 ## Outputs (`output/labelling/`)
 
