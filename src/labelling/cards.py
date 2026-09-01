@@ -38,14 +38,11 @@ import pandas as pd
 from matplotlib.backends.backend_pdf import PdfPages
 
 from src.parsing.parser import parse_session_with_diagnostics
-from src.labelling.sample import QUESTIONS, team_id
+from src.labelling.constants import QUESTIONS, VALID_LABELS
 
 OUT = Path("output/labelling")
 SEED = 42
 LETTERS = "ABCDEF"
-
-VALID_LABELS = ["Cohesive", "Dominant", "Free-rider", "Collusive",
-                "Conflict", "Disengaged", "Unclassified"]
 
 
 def _load_sessions(csv_paths: set[str]) -> dict[str, dict]:

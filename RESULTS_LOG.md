@@ -203,6 +203,12 @@
   all three (median 6 members journaled, 0 thin teams) → Step 4 not blocked.
   Doc-metadata dates recoverable for 83% of files. No sentiment analysis (gated,
   handoff-6). Nothing under `data/`/`output/` is committed.
+- **2026-07-26 — Labelling UX overhaul.** Added `src/labelling/ui.py` →
+  self-contained `label_ui.html` (embedded card images, dropdowns, autosave,
+  Download-CSV) so a non-technical second rater can label with zero setup.
+  Taxonomy trimmed 7→5+Unclassified (dropped Collusive: not matrix-separable from
+  Cohesive). No guided decision tree (would inflate κ); cards stay raw data. See
+  `docs/labelling-design.md §labelling-ux`.
 
 - **2026-07-20 — Hand-labelling tooling (RQ3-EXT Step 3, handoff-4).** Added
   `src/labelling/{sample,cards,kappa}.py`. Team-level sampler (unit =

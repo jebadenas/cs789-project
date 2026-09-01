@@ -23,12 +23,14 @@ are shaped this way), `src/labelling/README.md` (how a rater uses them), and
 
 ## The labelling (manual — the actual deliverable)
 
-2. **Jos's pass.** Label all 40 cards blind into a copy of
-   `label_sheet_template.csv`. Do NOT open `card_key.csv` / `labelling_sample.csv`
-   while labelling. Rubric decision order: Disengaged → Free-rider → Dominant →
-   Collusive → Conflict → else Cohesive → else Unclassified. Use the per-question
-   `primary_<question>` columns only when a team's three assessments disagree
-   (e.g. the Mixed cards).
+2. **Jos's pass.** Open `output/labelling/label_ui.html` in a browser
+   (`python3 -m src.labelling.ui` regenerates it), label all 40 cards blind, and
+   click **Download CSV** → `labels_<name>.csv`. Do NOT open `card_key.csv` /
+   `labelling_sample.csv` while labelling. Labels: Cohesive, Dominant,
+   Free-rider, Conflict, Disengaged, Unclassified (Collusive was dropped — see
+   design doc §labelling-ux). Use the per-question fields only when a team's three
+   assessments disagree (e.g. the Mixed cards). The `cards.pdf` + spreadsheet
+   route still works if preferred.
 3. **Second rater** — the critical-path dependency. Supervisor or labmate labels
    independently; a **subset (15–20 cards)** is enough (`kappa.py` inner-joins on
    `card_id`). If no second human, fall back to **intra-rater test–retest** (Jos
@@ -42,12 +44,17 @@ are shaped this way), `src/labelling/README.md` (how a rater uses them), and
 
 ## What the frozen labels unlock (research-plan §4, `notes/classification-research.md`)
 
-6. **Name the groups:** cross-tab human primary label × AA archetype
-   (from `aa_k4_assignments.csv`, aggregated to team majority the same way
-   `sample.py` does). A clean mapping ("A2 = 80% Conflict") names the group and
-   is evidence it's a real dynamic. *This script does not exist yet — write it.*
-7. **External cluster validity:** adjusted Rand index / NMI between the human
-   partition and the cluster partition.
+6. **Name the groups:** ✅ tooling built — `src/labelling/naming.py`. Cross-tabs
+   human primary label × archetype (and × binary flag), joining via
+   `card_key.csv` → `labelling_sample.csv` (which already carries the team-level
+   archetype). Prints the modal-label-per-archetype naming table. **Post-freeze
+   only** — do not run it until labels are frozen (and, under the test–retest
+   plan, until both passes exist). See `docs/handover-labelling-analysis.md`.
+   (`src/labelling/summary.py` gives an archetype-blind single-sheet summary,
+   safe to run before freeze.)
+7. **External cluster validity:** ✅ included in `naming.py` — adjusted Rand
+   index / NMI between the human partition and both the binary flag and the k=4
+   archetype partition, with a high-confidence-subset sensitivity pass.
 8. **Criterion validity (gated on handoff-5):** once Git + journals land, check
    labelled free-rider teams show lopsided commits / distressed journals.
 
