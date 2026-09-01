@@ -91,3 +91,52 @@ assessment rather than the conversation.
 (Both types include milder teams too — One-at-top 09/14/05 and Both-ends 37 are
 fairly balanced with a single accommodated weak member — so the tendency is a
 centre of gravity, not a rule. n=8 each; leads, not tallies.)
+
+---
+
+## Silent-lone-dissenter — dissent over *ideas*, not effort
+
+Most of these teams are harmonious and balanced (the "Silent" part: no under- or
+over-contributor stands out). What's distinctive is the *kind* of friction the
+minority show: **one member voices dissent about ideas/direction/style — a
+contrarian voice, not a slacker** — and it's usually aired civilly and resolved.
+
+The archetype (2025_s1 team_07): one member "singled out for his tendency to *push
+back on team ideas* and suggest changes that were not feasible or timely," and who
+grew frustrated "when grades for the pitch and proposal were released" — the leader
+defused it with an *anonymous feedback survey*. Effort was balanced throughout; the
+friction was one person's disagreement.
+
+The dissents are about **matters of opinion**, not contribution:
+- *working style* — "some members more decisive, others more analytical… addressed
+  with mutual respect" (2023_s2 team_03);
+- *ideas/feasibility* — members "willing to defend their ideas in a civil manner"
+  (2024_s1 team_12);
+- *leadership* — an early conflict "around leadership roles, resolved amicably"
+  (2024_s2 team_06).
+
+New sub-themes: **assessment feedback as a dissent trigger** (grades crystallising
+one member's frustration), and the friction being **constructive/civil** — leaders
+proactively defuse it (anonymous surveys, amicable hand-offs). This is the *healthy*
+face of conflict, and it fits the cascade meaning: flat effort ratings *except* one
+divergent voice — the "lone dissenter" who disagrees on opinion, which is exactly
+the member whose peer ratings would diverge. (~3–4 of 10 show the clear pattern; the
+rest are plainly harmonious; n=10, leads not tallies.)
+
+---
+
+## Synthesis — the *kind* of conflict distinguishes the types, not the amount
+
+The checklist's single `open_conflict` bit hides four qualitatively different
+frictions, and the *kind* separates the states better than the amount:
+
+| type | what the friction is *about* | how it's handled |
+|---|---|---|
+| **Contested** | the work — integration, design, quality | debated openly, resolved |
+| **One-at-top** | a slacker, from the over-carrier's POV | voiced, vented, escalated |
+| **Both-ends** | a slacker | avoided — silent freeze-out |
+| **Silent-lone-dissenter** | ideas / direction / style | civil, defused by leaders |
+
+This is the payoff of reading *within* types: "amount of divergence" recovers the
+cascade axis, but the *texture* of the friction is what actually makes each type a
+distinct kind of team — and none of that texture was on the 13-item checklist.
