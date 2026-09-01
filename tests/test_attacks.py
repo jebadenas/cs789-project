@@ -111,6 +111,9 @@ class TestZeroSelf:
         assert not np.allclose(full, part, equal_nan=True)
 
     def test_full_is_uniform_uplift_preserving_rank(self):
+        # Under the institutional cs399 baseline (unscaled — handoff-9b), zero-self
+        # collusion injects surplus onto teammates as a genuine grade uplift with
+        # no loser: every weight rises, relative standing (rank) is preserved.
         sm = generate_team(5, seed=7).score_matrix
         before = _baseline_iwf(sm)
         after = _baseline_iwf(zero_self(sm, full=True))

@@ -44,17 +44,16 @@ class TestWebPA:
 
     def test_asymmetric_scores_produce_correct_ranking(self):
         """
-        Students who receive more total points get higher IWFs.
+        Students who receive more (normalised) points get higher IWFs.
 
                   A(j=0)  B(j=1)  C(j=2)
-          A(i=0) [  10,      6,      8  ]   → sum = 24
-          B(i=1) [  12,     10,     14  ]   → sum = 36
-          C(i=2) [   8,     14,     12  ]   → sum = 34
+          A(i=0) [  10,      6,      8  ]
+          B(i=1) [  12,     10,     14  ]
+          C(i=2) [   8,     14,     12  ]
 
-        Mean sum = (24+36+34)/3 = 31.333
-        PA_A = 24/31.333 = 0.766  → IWF = 7.66
-        PA_B = 36/31.333 = 1.149  → IWF = 11.49
-        PA_C = 34/31.333 = 1.085  → IWF = 10.85
+        Rater totals (col sums) = [30, 30, 34] — unequal, so the canonical
+        per-rater normalisation is NOT a no-op here (unlike the fixed-budget real
+        data). Expected = received fractions ÷ team-mean × 10.
         """
         matrix = np.array([
             [10,  6,  8],
@@ -66,11 +65,10 @@ class TestWebPA:
 
         assert result.model_name == "WebPA"
         assert len(result.students) == 3
-        mean_sum = (24 + 36 + 34) / 3
-        np.testing.assert_array_almost_equal(
-            result.iwf_vector,
-            [24 / mean_sum * 10, 36 / mean_sum * 10, 34 / mean_sum * 10],
-        )
+        received = (matrix / matrix.sum(axis=0)).sum(axis=1)  # canonical WebPA
+        expected = received / received.mean() * 10
+        np.testing.assert_array_almost_equal(result.iwf_vector, expected)
+        assert result.iwf_vector.mean() == pytest.approx(10.0)
 
     def test_uniform_scores_produce_equal_iwf(self):
         """When everyone gives equal scores, all IWFs are 10.0."""
@@ -82,15 +80,16 @@ class TestWebPA:
 
     def test_self_scores_are_included(self):
         """
-        WebPA includes self-scores (original paper). Verify by checking
-        that the sum uses the diagonal value.
+        WebPA includes self-scores in each rater's total (original paper), so the
+        diagonal enters both the per-rater normalisation and the received sum.
 
                   A(j=0)  B(j=1)  C(j=2)
-          A(i=0) [  20,      6,      8  ]   → sum = 34 (includes self=20)
-          B(i=1) [   5,     10,      5  ]   → sum = 20
-          C(i=2) [   5,      8,     17  ]   → sum = 30
+          A(i=0) [  20,      6,      8  ]
+          B(i=1) [   5,     10,      5  ]
+          C(i=2) [   5,      8,     17  ]
 
-        If self were excluded: A sum=14, B sum=10, C sum=13
+        Rater totals (incl self) = [30, 24, 30]. Result must match canonical WebPA
+        with the diagonal included, and must DIFFER from the self-excluded variant.
         """
         matrix = np.array([
             [20, 6, 8],
@@ -100,8 +99,16 @@ class TestWebPA:
 
         result = webpa(_make_score_matrix(matrix))
 
-        mean_sum = (34 + 20 + 30) / 3
-        assert result.iwf_vector[0] == pytest.approx(34 / mean_sum * 10)
+        received = (matrix / matrix.sum(axis=0)).sum(axis=1)  # self included
+        expected = received / received.mean() * 10
+        np.testing.assert_array_almost_equal(result.iwf_vector, expected)
+
+        # Self-excluded normalisation would give a different vector.
+        m_excl = matrix.copy()
+        np.fill_diagonal(m_excl, 0.0)
+        received_excl = (m_excl / m_excl.sum(axis=0)).sum(axis=1)
+        expected_excl = received_excl / received_excl.mean() * 10
+        assert not np.allclose(result.iwf_vector, expected_excl)
 
     def test_non_submitter_still_receives_iwf(self):
         """

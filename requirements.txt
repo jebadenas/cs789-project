@@ -18,3 +18,9 @@ jupyter==1.1.1
 # Optional: enables the UMAP plot in the dynamics pipeline. The pipeline
 # skips UMAP cleanly if this is absent; all headline results are unaffected.
 umap-learn>=0.5.6  # optional
+
+# Qualitative pipeline (journal ingest/audit) — new for the RQ4 / RQ3-EXT
+# Step 4 strand. Text extraction only; does NOT affect the frozen numeric
+# results above (the peer-assessment IWF models never import these).
+pdfplumber==0.11.10
+python-docx==1.2.0

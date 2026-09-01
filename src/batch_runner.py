@@ -15,7 +15,7 @@ from typing import Callable, Optional
 import numpy as np
 
 from src.evaluation.rank_reversal import RankReversalSummary, compute_rank_reversals
-from src.models.baseline import baseline_average
+from src.models.baseline import baseline_normalised
 from src.models.peerrank_impute import peerrank_impute
 from src.models.peerrank_exclude import peerrank_exclude
 from src.models.webpa import webpa
@@ -29,7 +29,11 @@ from src.parsing.schemas import ScoreMatrix
 
 
 MODELS: dict[str, Callable[[ScoreMatrix], ModelResult]] = {
-    "baseline": baseline_average,
+    # Cross-model Δ compares relative standing, so the baseline is put on a common
+    # team mean of 10 (handoff-9b Task 2). For the absolute institutional weight
+    # use baseline_cs399 (= baseline_average) — that is what RQ1's attack analysis
+    # must use.
+    "baseline": baseline_normalised,
     "peerrank-impute": peerrank_impute,
     "peerrank-exclude": peerrank_exclude,
     "webpa": webpa,

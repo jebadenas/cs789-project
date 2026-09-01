@@ -25,6 +25,28 @@ def peerhits(
 
     Both vectors are L2-normalised after each update.
 
+    Documentation items (audit 2026-08-09, Task 4)
+    ----------------------------------------------
+    **4a — raw scores, no rater normalisation (asymmetry with PeerRank).** This
+    model operates on the raw score matrix, whereas ``peerrank.py`` column-
+    normalises each rater's budget to sum 1. We keep raw scores deliberately and
+    do **not** normalise: canonical HITS (Kleinberg 1999) is defined on the raw
+    adjacency matrix, and column-normalising here would itself be a deviation from
+    the published method and would manufacture a change with no source support.
+    The consequence must be stated in §4: when the two "advanced" models are
+    compared, part of the difference is this raw-vs-normalised asymmetry, not the
+    algorithms alone. (Verified: this choice leaves PeerHITS output unchanged from
+    the prior implementation — it is a documentation item, not a code change.)
+
+    **4b — simultaneous vs sequential update.** Both vectors are updated from the
+    *previous* iteration's values (simultaneous), rather than deriving the hub
+    from the freshly-updated authority as in Kleinberg's sequential form. Both are
+    power iterations on ``A Aᵀ`` / ``Aᵀ A`` and converge to the same principal
+    eigenvector, so this is non-standard but not a bug; §4 should note it. The
+    convergence check ``|new_authority − authority|`` can oscillate under the
+    two-step period, but terminates cleanly on all 417 matrices (verified
+    2026-08-09).
+
     Args:
         score_matrix: N×N peer-assessment matrix (matrix[i][j] = score giver j
             gave to recipient i). NaN columns indicate non-submitters.

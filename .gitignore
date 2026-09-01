@@ -1,5 +1,15 @@
 # Data Privacy (Crucial for CS789)
-data/*.csv
+# Deny everything under data/, then re-allow structure markers only.
+# The negation for directories is required or git will not descend far
+# enough to apply the .gitkeep/README exceptions.
+data/**
+!data/**/
+!data/.gitkeep
+!data/**/.gitkeep
+!data/**/README.md
+
+# Explicit, redundant, and deliberate — identifiable student journals.
+data/journals/
 
 # Generated output
 output/
