@@ -23,12 +23,14 @@ are shaped this way), `src/labelling/README.md` (how a rater uses them), and
 
 ## The labelling (manual — the actual deliverable)
 
-2. **Jos's pass.** Label all 40 cards blind into a copy of
-   `label_sheet_template.csv`. Do NOT open `card_key.csv` / `labelling_sample.csv`
-   while labelling. Rubric decision order: Disengaged → Free-rider → Dominant →
-   Collusive → Conflict → else Cohesive → else Unclassified. Use the per-question
-   `primary_<question>` columns only when a team's three assessments disagree
-   (e.g. the Mixed cards).
+2. **Jos's pass.** Open `output/labelling/label_ui.html` in a browser
+   (`python3 -m src.labelling.ui` regenerates it), label all 40 cards blind, and
+   click **Download CSV** → `labels_<name>.csv`. Do NOT open `card_key.csv` /
+   `labelling_sample.csv` while labelling. Labels: Cohesive, Dominant,
+   Free-rider, Conflict, Disengaged, Unclassified (Collusive was dropped — see
+   design doc §labelling-ux). Use the per-question fields only when a team's three
+   assessments disagree (e.g. the Mixed cards). The `cards.pdf` + spreadsheet
+   route still works if preferred.
 3. **Second rater** — the critical-path dependency. Supervisor or labmate labels
    independently; a **subset (15–20 cards)** is enough (`kappa.py` inner-joins on
    `card_id`). If no second human, fall back to **intra-rater test–retest** (Jos

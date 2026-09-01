@@ -44,8 +44,28 @@ OUT = Path("output/labelling")
 SEED = 42
 LETTERS = "ABCDEF"
 
-VALID_LABELS = ["Cohesive", "Dominant", "Free-rider", "Collusive",
-                "Conflict", "Disengaged", "Unclassified"]
+# Collusive dropped from the original 7: it is not reliably distinguishable from
+# Cohesive on the rating matrix alone (both look even/high) without journals.
+# See docs/labelling-design.md §labelling-ux.
+VALID_LABELS = ["Cohesive", "Dominant", "Free-rider", "Conflict",
+                "Disengaged", "Unclassified"]
+
+# Short signal hints shown as reference in the UI (descriptive, NOT a decision
+# tree — the rater forms their own judgement from the raw card).
+LABEL_HINTS = {
+    "Cohesive": "Contributions seen as roughly even; nobody singled out. "
+                "In-degree bars similar; no dark or bright row.",
+    "Dominant": "One person rated well ABOVE the rest. One bright row / one "
+                "tall in-degree bar.",
+    "Free-rider": "One person rated well BELOW the rest (may be a non-submitter "
+                  "= grey column). One dark row / one short bar.",
+    "Conflict": "One-directional negativity or factions. Asymmetry: A rates B "
+                "high but B rates A low; bimodal inflows.",
+    "Disengaged": "Everyone rates everyone (near-)identically — no signal. The "
+                  "matrix is basically one flat colour.",
+    "Unclassified": "Doesn't clearly fit, or the evidence conflicts. Use it "
+                    "honestly rather than forcing a label.",
+}
 
 
 def _load_sessions(csv_paths: set[str]) -> dict[str, dict]:
