@@ -100,5 +100,6 @@ construct); deep-dive is n=8 leads, not tallies; notes/marks contain real names 
 - Plan: `llm-journal-analysis-plan.md` · Infra: `cluster-setup.md`
 - Checklist (frozen): `../../notes/llm-dynamics-checklist-v1.md`
 - Results: `llm-results.md` · Portraits: `llm-type-portraits.md` · Deep dive: `llm-deep-dive.md`
+- **Write-up guardrails (read before drafting the dissertation): `llm-writeup-guardrails.md`**
 - Code: `src/qualitative/llm/` · Jobs: `slurm/journal_*.sh`
 - Outputs: `output/qualitative/llm/{notes,patterns,marks}/`, `features_by_state.csv`
