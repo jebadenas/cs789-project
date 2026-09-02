@@ -17,7 +17,15 @@ All generation on **Qwen2.5-72B (AWQ), vLLM on the cluster GPU**. Blinded: pseud
 | **4 · Mark** | Back to raw journals; score every team on the 13, blind, **3× with member labels shuffled**; majority-of-3 = final. | 357 files |
 | **5 · Analyse** | Consistency across runs; rates per cascade state; composite divergence index + significance. | results |
 
-**One-liner for the 13:** *discovered from the corpus (Steps 1–2), curated + frozen (Step 3) before scoring — a pre-registered instrument, not fitted to results.* (Caveat: two items — "singled-out above/below" — were added deliberately as the journal analogue of the cascade's standout direction.)
+### How we got the 13 questions (Step 3, in detail)
+Not chosen from theory up front — **discovered from the journals, then frozen before scoring:**
+1. **Open discovery (Step 1).** The 72B wrote free-form dynamics notes per team — no preset categories, just "what's going on here."
+2. **Recurring patterns per state (Step 2).** For each of the 8 cascade states, the model read that state's notes *together* and listed what **recurred** → 8 candidate lists (verbose, up to ~26 items each: effort imbalance, under-contribution, communication breakdowns, conflict, leadership issues, someone singled out, harmonious, mutual support, trajectory shifts…).
+3. **Pool → trim (Step 3).** Merge all 8 lists and cut: **(a) universal** patterns that appear in *every* state (positive early dynamics, "communication," adaptability — they can't distinguish anything), **(b)** duplicates and vague/un-markable items. Keep the recurring **and** distinguishing dynamics.
+4. **Land on 13, define, review, freeze.** ~13 questions in 4 groups — *effort & contribution (4), standing out (2), conflict (3), overall shape (4)*; each with a written definition; sharpened for distinctness (e.g. "singled-out" requires a *single identifiable* person, so it isn't a restatement of "under-contributed"); **reviewed and frozen before any team was marked.**
+
+- **Why it's defensible:** grounded in the corpus **and** pre-registered (frozen pre-marking → not fitted to results).
+- **Honest caveats:** (i) two items — *singled-out above/below* — were added deliberately as the journal analogue of the cascade's standout direction (not purely emergent); (ii) the checklist was built to **discriminate** (kept features that vary across states, dropped universal ones), which is exactly why the results lean on the "divergence" axis — the richer per-type texture (§4B) only surfaced in a later *open* re-read.
 
 ## 3 · Reliability (2 min)
 - Binary features: **80–98%** agreement across the 3 shuffled runs — a stable instrument.
