@@ -23,3 +23,7 @@ __pycache__/
 .DS_Store
 .idea/
 .ipynb_checkpoints/
+
+# R session cruft
+.Rhistory
+.Rproj.user/
