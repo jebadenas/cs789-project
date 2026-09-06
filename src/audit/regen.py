@@ -8,7 +8,7 @@ compute it under two model registries:
   numerically unchanged by this handoff.
 - **post-fix**: the current (fixed) registry.
 
-Δ is then summarised by cascade state (``src.dynamics2``). The earlier
+Δ is then summarised by cascade state (``src.cascade``). The earlier
 atypicality-fingerprint recompute (RQ3 §5.3.1) was cut; only Δ-by-state survives.
 """
 
@@ -19,8 +19,8 @@ import pandas as pd
 from scipy.stats import kruskal, mannwhitneyu
 
 from src.batch_runner import MODELS
-from src.dynamics2.dataio import OUTPUT_DIR as DYN2_OUT
-from src.dynamics2.dataio import load_matrices
+from src.cascade.dataio import OUTPUT_DIR as DYN2_OUT
+from src.cascade.dataio import load_matrices
 from src.models.types import ModelResult
 from src.parsing.schemas import ScoreMatrix
 

@@ -21,7 +21,7 @@ import pandas as pd
 from src.audit import absolute as absmod
 from src.audit import attacks_by_state as ab
 from src.audit import regen
-from src.dynamics2.dataio import OUTPUT_DIR as DYN2_OUT
+from src.cascade.dataio import OUTPUT_DIR as DYN2_OUT
 
 OUT = Path("output") / "audit_fix"
 ATTACK_OUT = Path("output") / "attacks"
@@ -34,7 +34,7 @@ STATE_ORDER_FULL = [
 def _states() -> pd.DataFrame:
     path = DYN2_OUT / "matrix_states.csv"
     if not path.exists():
-        sys.exit(f"{path} not found — run `python3 -m src.dynamics2 gates` first.")
+        sys.exit(f"{path} not found — run `python3 -m src.cascade gates` first.")
     return pd.read_csv(path)
 
 
@@ -97,7 +97,7 @@ def _model_diagnostics() -> pd.DataFrame:
     from src.models.peerhits_exclude import peerhits_exclude
     from src.models.peerrank_exclude import peerrank_exclude
     from src.models.webpa import webpa
-    from src.dynamics2.dataio import load_matrices
+    from src.cascade.dataio import load_matrices
 
     per_matrix_r = []
     means = {"baseline": [], "webpa": [], "peerrank-exclude": [], "peerhits-exclude": []}

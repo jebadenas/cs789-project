@@ -16,7 +16,7 @@ the *workspace*, not here — `~/Documents/University/2026-S2/COMPSCI-789` (its
 |----|----------|------|
 | RQ1 | manipulation resistance | `src/attacks/`, `src/audit/`, `src/evaluation/rank_reversal.py` |
 | RQ2 | convergence / readability | `src/evaluation/convergence.py` |
-| RQ3 | validity of the reading (the cascade) | `src/dynamics2/` (the cascade), `src/dynamics/` (degeneracy + features), `src/audit/regen.py` (Δ-by-state) |
+| RQ3 | validity of the reading (the cascade) | `src/cascade/` (the cascade), `src/dynamics/` (degeneracy + features), `src/audit/regen.py` (Δ-by-state) |
 | RQ4 | practical value (journals) | `src/qualitative/llm/` |
 
 ## Packages (`src/`)
@@ -25,9 +25,9 @@ the *workspace*, not here — `~/Documents/University/2026-S2/COMPSCI-789` (its
 - **`attacks/`** — RQ1 manipulation simulator: `transforms.py` (attack vectors), `synthetic.py` (planted-truth teams), `delta.py` (Attack Δ + Monte-Carlo), `runner.py` (batch), `profile_sweep.py`.
 - **`audit/`** — regenerates Δ / attack-by-state / absolute-vs-relative tables after model fixes. `regen.py` (per-matrix Δ, Δ-by-state, KW stats), `attacks_by_state.py`, `absolute.py`. Entry: `python -m src.audit`.
 - **`evaluation/`** — `convergence.py` (RQ2: do the iterative models converge), `rank_reversal.py` (RQ1 metric).
-- **`dynamics2/`** — **THE STATE CASCADE (current RQ3).** `gates.py` (the 3-gate cascade), `ranks.py`, `nulls.py`, `contested.py`, `crossq.py`, `pooled.py`, `dataio.py`, `validate.py`. Entry: `python -m src.dynamics2`. Output → `output/dynamics2/`.
-- **`dynamics/`** — ⚠ **not the cascade.** A degeneracy + feature-extraction *utility* only: `classifier.is_degenerate` + `features.extract_features` (+ `triad.py`) define the RQ1 attack "clean set." The archetypal-analysis lane this package once held was cut (scope revision 2026-08-18).
-- **`qualitative/`** — RQ4. **`llm/`** = the current LLM journal pipeline (`blobs → notes → aggregate → marking → run`; `model.py` = backend wrapper). The flat files (`reader`, `ingest`, `sample`, `templates`, `audit`) are the **retired human-coding** pipeline.
+- **`cascade/`** — **THE STATE CASCADE (current RQ3).** `gates.py` (the 3-gate cascade), `ranks.py`, `nulls.py`, `contested.py`, `crossq.py`, `pooled.py`, `dataio.py`, `validate.py`. Entry: `python -m src.cascade`. Output → `output/dynamics2/` (directory name kept for continuity with existing results/paths).
+- **`dynamics/`** — degeneracy + feature-extraction *utility* only: `classifier.is_degenerate` + `features.extract_features` (+ `triad.py`) define the RQ1 attack "clean set." The archetypal-analysis lane this package once held was cut (scope revision 2026-08-18). Not the cascade — that's `cascade/`.
+- **`qualitative/`** — RQ4. **`llm/`** = the current LLM journal pipeline (`blobs → notes → aggregate → marking → run`; `model.py` = backend wrapper). `reader.py` / `ingest.py` remain live (they generate the LLM's inputs). **`legacy/`** holds the retired human-coding files (`sample`, `templates`, `audit`).
 - **`reporting/`** — `aggregate_tables.py` (LaTeX table fragments for the dissertation), `data_quality.py`.
 - **`visualization/`** — Dash app (`app.py`) + `graph.py`/`force_layout.py`.
 - **Orchestration** — `batch_runner.py` (the `MODELS` registry + batch scoring), `cli.py` (interactive CLI), `__main__.py` (`python -m src`).

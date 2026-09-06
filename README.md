@@ -57,9 +57,9 @@ src/
   attacks/       # RQ1 manipulation simulator
   audit/         # Δ / attack-by-state / absolute table regeneration
   evaluation/    # RQ2 convergence; RQ1 rank-reversal
-  dynamics2/     # the state cascade (current RQ3)
+  cascade/       # the state cascade (current RQ3)
   dynamics/      # degeneracy + feature-extraction utility (RQ1 clean-set) — NOT the cascade
-  qualitative/   # RQ4: llm/ (current LLM journal pipeline) + retired human-coding files
+  qualitative/   # RQ4: llm/ (LLM pipeline) + reader/ingest (live inputs) + legacy/ (retired human-coding)
   reporting/     # LaTeX table fragments, data-quality
   visualization/ # Dash dashboard, force-layout graph
   batch_runner.py, cli.py, __main__.py   # model registry + entry points
@@ -89,7 +89,7 @@ python3 -m src.visualization.app
 Each team×question matrix is sorted by a three-gate **state cascade** (`src/dynamics2/`) into readable vs unreadable states — the current RQ3 lane. The earlier archetypal-analysis / atypicality approach was cut (scope revision 2026-08-18; see `docs/_archive/`).
 
 ```bash
-python3 -m src.dynamics2      # → output/dynamics2/
+python3 -m src.cascade      # → output/dynamics2/
 ```
 
 ## Qualitative journal analysis (RQ4)
