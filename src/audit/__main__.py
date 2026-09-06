@@ -5,8 +5,8 @@ tables the handoff names explicitly, ``output/attacks/attack_by_state*.csv``),
 leaving all pre-fix outputs untouched.
 
 Run:
-    python3 -m src.audit            # everything (delta+rq3+by-state, then attacks)
-    python3 -m src.audit delta      # Δ + RQ3 + Δ-by-state only (fast)
+    python3 -m src.audit            # everything (delta + by-state, then attacks)
+    python3 -m src.audit delta      # Δ + Δ-by-state only (fast)
     python3 -m src.audit attacks    # per-matrix attack-by-state only (slow)
 """
 
@@ -45,7 +45,7 @@ def _write(df: pd.DataFrame, path: Path) -> None:
 
 
 # --------------------------------------------------------------------------- #
-# Δ + RQ3 + Δ-by-state
+# Δ + Δ-by-state
 # --------------------------------------------------------------------------- #
 
 def run_delta() -> dict:
@@ -54,21 +54,9 @@ def run_delta() -> dict:
     pre_map = regen.matrix_deltas(pre_reg)
     post_map = regen.matrix_deltas(post_reg)
 
-    b = regen.load()
-    pre_arr = regen._delta_array(pre_map, b.fm)
-    post_arr = regen._delta_array(post_map, b.fm)
-
     # Task 1 record: WebPA↔baseline correlation, and per-model team means (Task 2).
     diag = _model_diagnostics()
     _write(diag, OUT / "model_diagnostics.csv")
-
-    # RQ3 before/after (Task 5.3).
-    rq3 = pd.DataFrame([regen.rq3_stats(b, pre_arr, "pre-fix"),
-                        regen.rq3_stats(b, post_arr, "post-fix")])
-    _write(rq3, OUT / "rq3_before_after.csv")
-    print("  RQ3 raw atyp–Δ  pre=%+.3f post=%+.3f | partial pre=%+.3f post=%+.3f"
-          % (rq3.raw_atyp_delta_r[0], rq3.raw_atyp_delta_r[1],
-             rq3.partial_atyp_delta_r[0], rq3.partial_atyp_delta_r[1]), flush=True)
 
     # Δ-by-state before/after (Task 8) + the ordering stop-trigger.
     states = _states()

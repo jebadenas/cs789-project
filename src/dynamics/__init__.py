@@ -1,9 +1,8 @@
-"""Team-dynamics classification pipeline.
+"""Score-matrix feature extraction + degeneracy classification.
 
-Extracts feature vectors from peer-rating score matrices, computes triad-census
-fingerprints, fits Archetypal Analysis to discover latent team-dynamic archetypes,
-and produces PCA / UMAP visualisations coloured by cross-model disagreement (Δ).
-
-Entry point:
-    python3 -m src.dynamics
+Retained utility only: ``features.extract_features`` (behavioural + triad
+fingerprint) and ``classifier.is_degenerate``, which together define the RQ1
+attack "clean set" (see ``src.attacks.runner``). The archetypal-analysis /
+atypicality lane this package used to host was cut (scope revision 2026-08-18);
+its modules were removed. The current state cascade lives in ``src.dynamics2``.
 """
