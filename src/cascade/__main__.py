@@ -5,11 +5,11 @@ rater's ratings to within-rater normalised ranks, then runs a three-gate state
 cascade whose every threshold is a per-matrix permutation null.
 
 Run:
-    python3 -m src.dynamics2                 # full cascade, default n_perm=1000
-    python3 -m src.dynamics2 gates --n-perm 200
-    python3 -m src.dynamics2 contested
-    python3 -m src.dynamics2 crossq
-    python3 -m src.dynamics2 pooled          # team-level pooled cascade (handoff-11 B)
+    python3 -m src.cascade                 # full cascade, default n_perm=1000
+    python3 -m src.cascade gates --n-perm 200
+    python3 -m src.cascade contested
+    python3 -m src.cascade crossq
+    python3 -m src.cascade pooled          # team-level pooled cascade (handoff-11 B)
 
 Outputs to output/dynamics2/:
     matrix_states.csv               — one row per team×question: gate cascade state
@@ -34,15 +34,15 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from src.dynamics2 import contested as contested_mod
-from src.dynamics2 import crossq as crossq_mod
-from src.dynamics2 import gates as gates_mod
-from src.dynamics2 import pooled as pooled_mod
-from src.dynamics2 import ranks
-from src.dynamics2.dataio import (
+from src.cascade import contested as contested_mod
+from src.cascade import crossq as crossq_mod
+from src.cascade import gates as gates_mod
+from src.cascade import pooled as pooled_mod
+from src.cascade import ranks
+from src.cascade.dataio import (
     OUTPUT_DIR, MatrixRecord, load_aa_assignments, load_matrices,
 )
-from src.dynamics2.nulls import DEFAULT_N_PERM
+from src.cascade.nulls import DEFAULT_N_PERM
 
 ALPHA = 0.05
 STATE_ORDER = [
@@ -414,7 +414,7 @@ def main() -> None:
 def _load_states() -> pd.DataFrame:
     path = OUTPUT_DIR / "matrix_states.csv"
     if not path.exists():
-        print(f"  {path} not found — run `python3 -m src.dynamics2 gates` first.",
+        print(f"  {path} not found — run `python3 -m src.cascade gates` first.",
               file=sys.stderr)
         sys.exit(1)
     return pd.read_csv(path)

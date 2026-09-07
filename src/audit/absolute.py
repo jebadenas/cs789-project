@@ -29,7 +29,7 @@ from src.attacks.transforms import (
     single_outlier, targeted_downvote, uniform_inflation, zero_self,
 )
 from src.batch_runner import MODELS
-from src.dynamics2.dataio import load_matrices
+from src.cascade.dataio import load_matrices
 from src.models.baseline import baseline_cs399
 
 DETERMINISTIC = {

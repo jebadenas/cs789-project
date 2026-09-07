@@ -54,10 +54,27 @@ Cascade → trajectory *observations*: Silent-flat 10/10 stable; One-at-top ~hal
 - **The clean validation is §4A** — features/divergence vs **cascade state**, which is genuinely external to the LLM.
 - **Decision to make:** (a) split trajectory into a separate prompt/pass to break the circularity, or (b) lean on cascade-state alignment as the primary validation and treat trajectory purely as motivation for RQ4. *(Lean: both — (a) for the outcome step, keep (b) as the headline.)*
 
-## 6 · Next step → RQ4 (2 min)
-- Add a **14th question — "Would you contact this team?" (yes / borderline / no)** as an LLM-coded **outcome label**, in a *separate* pass (breaks circularity).
-- Tighten the two noisy features; drop mutual_support.
-- → gives the outcome labels for the **RQ4 yield curve** (does the cascade sort surface "contact-worthy" teams faster than the current lowest-score heuristic).
+## 6 · Next steps → RQ4 (3 min)
+
+**Housekeeping (agreed, low-risk):**
+- Tighten the two noisy questions (trajectory 72%, conflict-handling 55%); **drop mutual_support** (100% everywhere).
+- Move the outcome judgment into a **separate LLM pass** that can't see the feature scores — breaks the "model marks its own homework" problem.
+
+**The open question — what do we grade "success" against?**
+RQ4 wants to know: *does sorting teams by cascade state surface the teams that need attention faster than the current "lowest peer-score first" rule?* To answer it we need a **real-world "this team was in trouble" label that is NOT the LLM and NOT the peer ratings** (the peer ratings already define the cascade — using them to grade it is circular).
+
+- ❌ **Individual grades don't work** — in this course the individual mark = team project mark × peer score. So it's the peer ratings relabelled; testing against it just re-confirms the peer ratings (which is already our headline). No new information.
+- ⚠️ **What we can/can't get:** no escalation records. We *can* likely get the **raw team project mark** (marker-given, before peer weighting) — the one grade that's genuinely external.
+
+**Two honest paths to put to the supervisor:**
+
+| Path | "Trouble" label | What we'd claim | Honest limit |
+|---|---|---|---|
+| **A · Team grade as outcome** | raw team project mark (external, from markers) | troubled teams actually hand in worse work → the dynamics have real consequences | measures *product quality, not team health*; a strong core carries a bad team to a fine mark; one coarse number per team → probably a weak effect |
+| **B · Peer ratings are the outcome** | the peer-rating splits themselves (already the course's real signal of trouble) | the journals independently recover that signal (**our current headline**); cascade is then a **prioritisation aid**, not a hard prediction | not a fresh prediction — it validates a signal the course already has, so RQ4 is framed as "does this help triage" not "does this predict" |
+
+- **Lean:** try Path A if we get the team marks (it's the only external test available); **fall back to Path B** — which is already solid — if the grade signal is too weak. Either way, be explicit that we're **not** claiming to predict outcomes the peer ratings don't already contain.
+- **Ask of the supervisor:** can we get **raw team project marks** (not individual/peer-weighted)? That single answer decides whether Path A is even on the table.
 
 ---
 

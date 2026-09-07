@@ -20,8 +20,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from src.dynamics2 import ranks
-from src.dynamics2.nulls import DEFAULT_N_PERM, NullResult, permutation_p
+from src.cascade import ranks
+from src.cascade.nulls import DEFAULT_N_PERM, NullResult, permutation_p
 
 ALPHA = 0.05
 

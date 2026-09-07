@@ -24,12 +24,12 @@ from itertools import combinations
 
 import numpy as np
 
-from src.dynamics2 import ranks
-from src.dynamics2.dataio import MatrixRecord
-from src.dynamics2.nulls import (
+from src.cascade import ranks
+from src.cascade.dataio import MatrixRecord
+from src.cascade.nulls import (
     DEFAULT_N_PERM, permutation_p, permute_matrix, seed_from_key,
 )
-from src.dynamics2.pooled import pooled_tau_matrix
+from src.cascade.pooled import pooled_tau_matrix
 
 ALPHA = 0.05
 MIN_FACTION_RATERS = 4  # below this the 2-partition search is not meaningful

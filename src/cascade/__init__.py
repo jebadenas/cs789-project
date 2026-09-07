@@ -14,5 +14,5 @@ This package does NOT modify or replace `src/dynamics`; both pipelines remain
 runnable so the old and new partitions can be compared.
 
 Entry point:
-    python3 -m src.dynamics2
+    python3 -m src.cascade
 """

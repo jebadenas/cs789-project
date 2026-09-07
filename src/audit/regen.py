@@ -1,33 +1,26 @@
-"""Δ regeneration + RQ3 recompute + Δ-by-state (Tasks 5 & 8).
+"""Δ regeneration + Δ-by-state (Tasks 5 & 8).
 
-Cross-model Δ per matrix is the per-student standard deviation of the six models'
-IWFs, averaged over students — exactly the formula in
-``src.dynamics.__main__._compute_team_delta`` (keyed per team×question, i.e. per
-matrix). We compute it under two model registries:
+Cross-model Δ per matrix is the per-student standard deviation of the models'
+IWFs, averaged over students (keyed per team×question, i.e. per matrix). We
+compute it under two model registries:
 
 - **pre-fix**: the previous baseline (un-scaled mean) — every other model is
   numerically unchanged by this handoff.
 - **post-fix**: the current (fixed) registry.
 
-The atypicality score and the 24 features are computed from raw scores and do not
-depend on model output, so RQ3's atypicality axis is identical pre/post; only Δ
-moves. That lets us reuse the reconstructed Bundle from ``dynamics.validity`` and
-swap in each Δ.
+Δ is then summarised by cascade state (``src.cascade``). The earlier
+atypicality-fingerprint recompute (RQ3 §5.3.1) was cut; only Δ-by-state survives.
 """
 
 from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-from scipy.stats import kruskal, mannwhitneyu, pearsonr, ttest_ind
+from scipy.stats import kruskal, mannwhitneyu
 
 from src.batch_runner import MODELS
-from src.dynamics.features import FEATURE_NAMES
-from src.dynamics.validity import (
-    Bundle, _low_level_controls, _partial_correlation, load,
-)
-from src.dynamics2.dataio import OUTPUT_DIR as DYN2_OUT
-from src.dynamics2.dataio import load_matrices
+from src.cascade.dataio import OUTPUT_DIR as DYN2_OUT
+from src.cascade.dataio import load_matrices
 from src.models.types import ModelResult
 from src.parsing.schemas import ScoreMatrix
 
@@ -73,51 +66,6 @@ def matrix_deltas(registry: dict) -> dict[tuple[str, str, str], float]:
                 stds.append(float(np.std(vals)))
         out[rec.key] = float(np.mean(stds)) if stds else 0.0
     return out
-
-
-def _delta_array(delta_map: dict, fm: pd.DataFrame) -> np.ndarray:
-    keys = list(zip(fm["csv_path"], fm["team_name"], fm["question_label"]))
-    return np.array([delta_map[k] for k in keys], dtype=float)
-
-
-def rq3_stats(b: Bundle, delta: np.ndarray, label: str) -> dict:
-    """Row-level, team-level, group-contrast and partial-correlation RQ3 stats."""
-    clean = ~b.degenerate
-    d_c, atyp_c = delta[clean], b.dist[clean]
-
-    r_row, p_row = pearsonr(atyp_c, d_c)
-
-    # Team-level aggregation (majority-vote flag), matching validity.cmd_b.
-    df = b.fm[["csv_path", "team_name"]].copy()
-    df["atyp"], df["delta"], df["flag"], df["degen"] = b.dist, delta, b.flag, b.degenerate
-    clean_df = df[~df["degen"]].copy()
-    clean_df["team_id"] = clean_df["csv_path"] + " :: " + clean_df["team_name"]
-    agg = clean_df.groupby("team_id").agg(
-        mean_atyp=("atyp", "mean"), mean_delta=("delta", "mean"),
-        n_anom=("flag", lambda s: (s == "Anomalous").sum()), n=("flag", "size"),
-    ).reset_index()
-    agg["team_flag"] = np.where(agg["n_anom"] >= agg["n"] / 2, "Anomalous", "Typical")
-    r_team, p_team = pearsonr(agg["mean_atyp"], agg["mean_delta"])
-    a = agg.loc[agg.team_flag == "Anomalous", "mean_delta"]
-    t = agg.loc[agg.team_flag == "Typical", "mean_delta"]
-    welch_p = ttest_ind(a, t, equal_var=False).pvalue if len(a) > 1 and len(t) > 1 else np.nan
-    mw_p = mannwhitneyu(a, t, alternative="two-sided").pvalue if len(a) and len(t) else np.nan
-
-    # Partial correlation controlling for low-level structure (validity.cmd_c).
-    controls = _low_level_controls(b)[clean]
-    raw_r, raw_p = pearsonr(atyp_c, d_c)
-    pr, ppart = _partial_correlation(atyp_c, d_c, controls)
-
-    return {
-        "variant": label,
-        "row_r": r_row, "row_p": p_row, "n_rows": int(clean.sum()),
-        "team_r": r_team, "team_p": p_team, "n_teams": len(agg),
-        "contrast_anom_meanD": float(a.mean()) if len(a) else np.nan,
-        "contrast_typ_meanD": float(t.mean()) if len(t) else np.nan,
-        "welch_p": float(welch_p), "mw_p": float(mw_p),
-        "raw_atyp_delta_r": raw_r, "partial_atyp_delta_r": pr, "partial_p": ppart,
-        "delta_mean_all": float(delta.mean()), "delta_mean_clean": float(d_c.mean()),
-    }
 
 
 def _epsilon_squared(H: float, n: int, k: int) -> float:

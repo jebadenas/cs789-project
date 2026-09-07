@@ -27,7 +27,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from src.attacks.synthetic import SyntheticTeam, generate_team
-from src.dynamics2 import gates, ranks
+from src.cascade import gates, ranks
 
 MU0 = 10.0
 SIZES = (4, 5, 6)
@@ -183,7 +183,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from src.dynamics2.dataio import load_matrices
+from src.cascade.dataio import load_matrices
 
 OUT = Path("output") / "dynamics2" / "validation"
 
@@ -420,7 +420,7 @@ def _write(df: pd.DataFrame, name: str) -> None:
 # Pooled-lane validation (handoff-11 B3) — the gate on Workstream B
 # --------------------------------------------------------------------------- #
 
-from src.dynamics2 import pooled as pooled_mod  # noqa: E402
+from src.cascade import pooled as pooled_mod  # noqa: E402
 
 NQ = 3  # questions per team (code / report / poster), what pooling pools
 

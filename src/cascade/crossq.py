@@ -17,8 +17,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from src.dynamics2 import ranks
-from src.dynamics2.dataio import MatrixRecord
+from src.cascade import ranks
+from src.cascade.dataio import MatrixRecord
 
 MIN_QUALIFYING_RATERS = 2   # a question is "readable" iff ≥2 qualifying raters ordered it
 MIN_COMMON_MEMBERS = 3      # ≥ this many shared members to compute a cross-question τ-b

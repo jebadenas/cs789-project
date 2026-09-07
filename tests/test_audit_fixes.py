@@ -12,7 +12,7 @@ import numpy as np
 import pytest
 
 from src.attacks.transforms import zero_self
-from src.dynamics2.dataio import load_matrices
+from src.cascade.dataio import load_matrices
 from src.models.baseline import baseline_cs399, baseline_normalised
 from src.models.peerhits import peerhits
 from src.models.peerrank import peerrank
