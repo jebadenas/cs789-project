@@ -21,8 +21,14 @@ from src.parsing.discovery import discover_csvs
 from src.parsing.parser import parse_session
 
 
+# NB — deliberate disambiguation (decisions.md 2026-08-10 / 2026-08-18):
+# this interactive CLI runs the *absolute* institutional baseline (baseline_cs399,
+# via the baseline_average alias) under the explicit key "baseline-cs399". The
+# batch / Δ / reporting pipeline (src.batch_runner) instead keys "baseline" at the
+# team-mean-normalised baseline — a different model. The two keys are kept distinct
+# so the same word never means opposite things in output files read side by side.
 MODELS = {
-    "baseline": baseline_average,
+    "baseline-cs399": baseline_average,
     "peerrank-impute": peerrank_impute,
     "peerrank-exclude": peerrank_exclude,
     "webpa": webpa,

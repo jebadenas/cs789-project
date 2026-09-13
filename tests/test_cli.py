@@ -122,14 +122,14 @@ class TestCLIRun:
         assert set(df["model"].unique()) == {"peerrank-impute"}
 
     def test_multiple_model_flags_runs_only_those_models(self, tmp_path):
-        """Behaviour: --model baseline --model peerrank-impute runs exactly those two."""
+        """Behaviour: --model baseline-cs399 --model peerrank-impute runs exactly those two."""
         from src.cli import run
 
         output = tmp_path / "out.csv"
-        run([str(CSV_2023), "--model", "baseline", "--model", "peerrank-impute", "--output", str(output)])
+        run([str(CSV_2023), "--model", "baseline-cs399", "--model", "peerrank-impute", "--output", str(output)])
 
         df = pd.read_csv(output)
-        assert set(df["model"].unique()) == {"baseline", "peerrank-impute"}
+        assert set(df["model"].unique()) == {"baseline-cs399", "peerrank-impute"}
 
     def test_unknown_model_exits_with_error(self, tmp_path, capsys):
         """Behaviour: unknown --model name exits with SystemExit and lists valid models."""
@@ -139,7 +139,7 @@ class TestCLIRun:
             run([str(CSV_2023), "--model", "nonexistent", "--output", str(tmp_path / "out.csv")])
 
         captured = capsys.readouterr()
-        assert "baseline" in captured.err
+        assert "baseline-cs399" in captured.err
         assert "peerrank" in captured.err
 
     def test_team_flag_filters_to_named_team_only(self, tmp_path):
