@@ -22,10 +22,14 @@ N = 119 teams. Grouping: 8 fine cascade states (`pooled_state`) and 4 buckets
 ## Reliability (3-run agreement)
 
 Binary items agreed across all 3 runs for **80–98%** of teams (mutual_support 98,
-open_conflict 92, under-contributed 91, effort_imbalance 87 … underperformance
-80). The categoricals were weaker: **trajectory 72%**, **conflict_handling 54%**.
-→ conflict_handling is **dropped** (use `open_conflict`, 92% reliable); trajectory
-reported with caution. The binary checklist is a stable instrument.
+open_conflict 92, under-contributed 91, effort_imbalance 87 … underperformance 80;
+these binary %s are pre-dedup and unlikely to move materially). The categoricals were
+weaker: **trajectory 74%**, **conflict_handling 60%** (clean, post-dedup; pre-dedup
+72%/54%). The binary checklist is a stable instrument.
+
+→ **Update:** rather than drop conflict_handling, Workstream 3 reworded it as a
+gate+follow-up and **recovered it to ~80%** (binary tier); the same rewrite did *not*
+fix trajectory (fell to ~65%). See `llm-reliability-v2-results.md`.
 
 ## Headline result — divergence rises across the cascade
 
@@ -34,13 +38,21 @@ present, 0–9; harmonious & mutual_support excluded) increases monotonically:
 
 | bucket | n | mean | median |
 |---|---|---|---|
-| Silent | 21 | **0.95** | 0 |
-| Contested | 37 | 2.30 | 1 |
-| No-standout | 17 | 2.76 | 3 |
-| Standout | 44 | **3.32** | 3.5 |
+| Silent | 21 | **1.05** | 0 |
+| Contested | 37 | 2.38 | 1 |
+| No-standout | 17 | 2.88 | 4 |
+| Standout | 44 | **3.39** | 4 |
 
-- Buckets differ: **Kruskal–Wallis H=13.6, p=0.0035**.
-- **Silent vs Standout: Mann–Whitney p=0.00056** (mean 0.95 vs 3.32).
+- Buckets differ: **Kruskal–Wallis H=12.0, p=0.0075**.
+- **Silent vs Standout: Mann–Whitney p=0.0013** (mean 1.05 vs 3.39).
+
+> **Updated 2026-09-10 (post-dedup).** These are recomputed after the 2024_s2
+> journal-dedup re-mark (`journal-data-dedup.md`). The pre-dedup figures were
+> H=13.6/p=0.0035 (means 0.95/2.30/2.76/3.32) — cleaning 2024_s2 nudged every bucket
+> up slightly and softened the Kruskal p from 0.0035 to 0.0075. The result is
+> unchanged in substance: monotonic rise, still significant, Silent-vs-Standout still
+> highly significant. Reconstruction validated (reproduces the pre-dedup figures
+> exactly on the old marks); see `scripts/divergence_index.py`.
 
 This is one composite test of the core hypothesis, so it carries no
 multiple-comparison penalty — and it is clearly significant. **The journals

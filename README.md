@@ -48,20 +48,25 @@ python3 -m src run data/myfile.csv --output results/my_run.csv
 
 ## Project structure
 
+**Full map: [`ARCHITECTURE.md`](ARCHITECTURE.md)** — the authoritative guide to where everything is (packages → research questions → files).
+
 ```
 src/
-  models/       # IWF models (baseline, webpa, peerrank, peerhits + variants)
-  parsing/      # CSV parser and ScoreMatrix schemas
-  attacks/      # Synthetic attack simulator (planned)
-  evaluation/   # Metrics: rank reversal, attack delta (planned)
-  dynamics/     # Team-dynamics classification pipeline (RQ3)
-  qualitative/  # Sentiment pipeline (planned)
-  visualization/ # Dash dashboard, force-layout graph, archetype map
-  cli.py        # CLI entry point
-data/           # Place CSV files here (gitignored)
-output/         # Generated results (gitignored)
-tests/          # Pytest test suite
-docs/           # Research docs, diary, meeting notes
+  parsing/       # CSV → ScoreMatrix (shared input type)
+  models/        # IWF models: baseline, webpa, peerrank, peerhits (+ non-submitter variants)
+  attacks/       # RQ1 manipulation simulator
+  audit/         # Δ / attack-by-state / absolute table regeneration
+  evaluation/    # RQ2 convergence; RQ1 rank-reversal
+  cascade/       # the state cascade (current RQ3)
+  dynamics/      # degeneracy + feature-extraction utility (RQ1 clean-set) — NOT the cascade
+  qualitative/   # RQ4: llm/ (LLM pipeline) + reader/ingest (live inputs) + legacy/ (retired human-coding)
+  reporting/     # LaTeX table fragments, data-quality
+  visualization/ # Dash dashboard, force-layout graph
+  batch_runner.py, cli.py, __main__.py   # model registry + entry points
+data/            # CSVs + journals (gitignored — privacy)
+output/          # Generated results (gitignored)
+tests/           # Pytest suite (mirrors modules)
+docs/            # Design docs; docs/qualitative/ = live analysis write-ups
 ```
 
 ## Tests
@@ -79,31 +84,16 @@ python3 -m src.visualization.app
 # Open http://127.0.0.1:8050
 ```
 
-## Team-dynamics classification (RQ3)
+## The state cascade (RQ3)
 
-Classifies each team's peer-rating matrix into latent team-dynamic archetypes using a 25-dimensional feature vector and Archetypal Analysis (Cutler & Breiman 1994).
+Each team×question matrix is sorted by a three-gate **state cascade** (`src/dynamics2/`) into readable vs unreadable states — the current RQ3 lane. The earlier archetypal-analysis / atypicality approach was cut (scope revision 2026-08-18; see `docs/_archive/`).
 
-**Feature vector (25 dims per team-matrix):**
-- 9 behavioural metrics on the weighted directed graph: reciprocity, Gini (in-degree), mean/std rater variance, asymmetry, clustering coefficient, assortativity, non-submitter fraction, mean self-share
-- 16 directed triad-census proportions (Holland & Leinhardt 1976), computed on the rater-mean-binarized graph
-
-**Pipeline:**
-1. Featurize all 136 score matrices → standardize
-2. PCA (2-D, interpretable axes) + UMAP (2-D, non-linear structure)
-3. Archetypal Analysis sweep k=2–8: RSS elbow + bootstrap stability to select k
-4. Colour scatter plots by Δ (mean cross-model IWF disagreement) — tests whether archetypes predict model instability
-
-**Run:**
 ```bash
-pip install umap-learn  # one-time
-python3 -m src.dynamics
-# Outputs to output/dynamics/:
-#   feature_matrix.csv       — 25-dim vectors + Δ per team
-#   pca_plot.html            — interactive PCA scatter
-#   umap_plot.html           — interactive UMAP scatter
-#   rss_plot.html            — archetype count selection chart
-#   archetypes.json          — archetype vectors + RSS per k
-#   archetype_stability.csv  — bootstrap stability per k
+python3 -m src.cascade      # → output/dynamics2/
 ```
 
-**Research background:** `docs/team-dynamics-similarity-research.md`
+## Qualitative journal analysis (RQ4)
+
+An open-weight LLM reads each team's reflective journals and codes team-dynamics questions (`src/qualitative/llm/`). Method, results, and the reliability diagnosis are written up in **`docs/qualitative/README.md`**.
+
+See **[`ARCHITECTURE.md`](ARCHITECTURE.md)** for the full package map.

@@ -24,7 +24,7 @@ import pandas as pd
 from src.attacks.delta import attack_delta, monte_carlo_single_outlier
 from src.attacks.transforms import targeted_downvote, uniform_inflation, zero_self
 from src.batch_runner import MODELS
-from src.dynamics2.dataio import load_matrices
+from src.cascade.dataio import load_matrices
 
 DETERMINISTIC = {
     "uniform-inflation": uniform_inflation,

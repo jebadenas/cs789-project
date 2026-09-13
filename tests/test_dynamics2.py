@@ -10,8 +10,8 @@ import numpy as np
 import pytest
 from scipy.stats import kendalltau
 
-from src.dynamics2 import contested, gates, ranks
-from src.dynamics2.nulls import permutation_p, permute_matrix, seed_from_key
+from src.cascade import contested, gates, ranks
+from src.cascade.nulls import permutation_p, permute_matrix, seed_from_key
 from src.parsing.schemas import ScoreMatrix, StudentInfo
 
 

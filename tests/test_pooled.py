@@ -11,7 +11,7 @@ import numpy as np
 import pytest
 
 from src.attacks.synthetic import generate_team
-from src.dynamics2 import contested, gates, pooled, ranks
+from src.cascade import contested, gates, pooled, ranks
 
 
 def _team_items(n: int, seed: int, contributions=None, *, nq: int = 3, profile="reliable"):

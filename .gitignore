@@ -27,3 +27,7 @@ __pycache__/
 **/node_modules
 **/.next
 ui/src/app/dashboard/teams.data.json
+
+# R session cruft
+.Rhistory
+.Rproj.user/

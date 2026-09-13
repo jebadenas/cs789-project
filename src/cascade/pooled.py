@@ -25,8 +25,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from src.dynamics2 import gates, ranks
-from src.dynamics2.nulls import DEFAULT_N_PERM, permute_matrix, seed_from_key
+from src.cascade import gates, ranks
+from src.cascade.nulls import DEFAULT_N_PERM, permute_matrix, seed_from_key
 
 ALPHA = 0.05
 

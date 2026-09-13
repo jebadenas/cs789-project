@@ -10,7 +10,7 @@ import numpy as np
 import pytest
 
 from src.attacks.synthetic import generate_team
-from src.dynamics2 import gates, validate as V
+from src.cascade import gates, validate as V
 
 
 class TestGeneratorCS399Form:
