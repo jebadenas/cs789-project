@@ -1,0 +1,77 @@
+:root {
+  /* GitHub-like palette (Primer) */
+  --background: #f6f8fa;
+  --card: #ffffff;
+  --surface: #f6f8fa;
+  --foreground: #1f2328;
+  --text: #1f2328;
+  --muted: #59636e;
+  --muted-strong: #1f2328;
+  --line: #d1d9e0;
+  --line-muted: #d8dee4;
+  --accent: #0969da;
+  --accent-hover: #0860ca;
+  --ok: #1a7f37;
+  --danger: #cf222e;
+  --warning: #9a6700;
+  --good: #1a7f37;
+  --attention-bg: #fff8c5;
+  --danger-bg: #ffebe9;
+  --good-bg: #dafbe1;
+  --neutral-bg: #eef1f4;
+  /* aliases so pre-existing dashboard classes keep working on GitHub tokens */
+  --dashboard-bg: var(--background);
+  --dashboard-card: var(--card);
+  --dashboard-sidebar: var(--card);
+  --dashboard-line: var(--line);
+  --dashboard-muted: var(--muted);
+  --dashboard-text: var(--text);
+  --dashboard-soft: #f6f8fa;
+  --brand-neutral: var(--line);
+  --danger-soft: var(--danger-bg);
+  --good-soft: var(--good-bg);
+  --warning-soft: var(--attention-bg);
+}
+
+html {
+  min-height: 100%;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: clip;   /* clip (not hidden) so it doesn't break position: sticky */
+}
+
+body {
+  min-height: 100vh;
+  color: var(--foreground);
+  background: var(--background);
+  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+fieldset:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}

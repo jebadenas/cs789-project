@@ -23,3 +23,7 @@ __pycache__/
 .DS_Store
 .idea/
 .ipynb_checkpoints/
+# Next.js apps
+**/node_modules
+**/.next
+ui/src/app/dashboard/teams.data.json

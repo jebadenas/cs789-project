@@ -1,0 +1,429 @@
+.shell {
+  width: min(100%, 1120px);
+  margin: 0 auto;
+  padding: 40px 20px 72px;
+}
+
+.introCard,
+.completeCard,
+.panel {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  box-shadow: 0 20px 70px rgba(30, 36, 45, 0.08);
+}
+
+.introCard {
+  display: grid;
+  gap: 28px;
+  max-width: 880px;
+  margin: 48px auto 0;
+  padding: 48px;
+}
+
+.completeCard {
+  display: grid;
+  gap: 18px;
+  max-width: 680px;
+  margin: 84px auto 0;
+  padding: 44px;
+  text-align: center;
+}
+
+.completeCard .primaryButton {
+  justify-self: center;
+}
+
+.eyebrow,
+.partLabel {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.shell h1 {
+  margin: 0;
+  color: var(--text);
+  font-size: clamp(2rem, 5vw, 4rem);
+  line-height: 0.98;
+  letter-spacing: -0.05em;
+}
+
+.shell h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: clamp(1.35rem, 2vw, 1.8rem);
+  letter-spacing: -0.03em;
+}
+
+.shell h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.lede {
+  max-width: 760px;
+  margin: 0;
+  color: var(--muted-strong);
+  font-size: 1.2rem;
+  line-height: 1.65;
+}
+
+.infoGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.infoGrid div {
+  min-height: 150px;
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+}
+
+.infoGrid h2 {
+  margin-bottom: 8px;
+  font-size: 1rem;
+  letter-spacing: -0.01em;
+}
+
+.demoNote,
+.forwardNote,
+.validationError {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.demoNote,
+.forwardNote {
+  color: var(--muted);
+}
+
+.validationError {
+  color: #a40e26;
+  font-weight: 700;
+}
+
+.panel form {
+  display: grid;
+  gap: 16px;
+}
+
+.infoGrid p,
+.helpText,
+.journalCard p,
+.snippetText,
+.completeCard p,
+.validationText {
+  margin: 0;
+  color: var(--muted-strong);
+  line-height: 1.65;
+}
+
+.actionRow {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.primaryButton,
+.secondaryButton {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 22px;
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+  transition: background 160ms ease, transform 160ms ease, opacity 160ms ease;
+}
+
+.primaryButton {
+  color: white;
+  background: var(--accent);
+  border: 0;
+}
+
+.secondaryButton {
+  color: var(--text);
+  background: white;
+  border: 1px solid var(--line);
+}
+
+.primaryButton:hover:not(:disabled),
+.secondaryButton:hover {
+  transform: translateY(-1px);
+}
+
+.primaryButton:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.primaryButton:disabled {
+  opacity: 0.46;
+  cursor: not-allowed;
+}
+
+.caseHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 320px);
+  gap: 24px;
+  align-items: end;
+  margin-bottom: 20px;
+}
+
+.caseHeader h1 {
+  font-size: clamp(2rem, 4vw, 3.4rem);
+}
+
+.progressStack {
+  display: grid;
+  gap: 8px;
+}
+
+.progress {
+  position: relative;
+  height: 12px;
+  overflow: hidden;
+  background: #e4e0d8;
+  border-radius: 999px;
+}
+
+.progressText {
+  margin: 0;
+  color: var(--muted-strong);
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-align: right;
+}
+
+.progressFill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: linear-gradient(90deg, var(--accent), #7b8fff);
+  border-radius: inherit;
+}
+
+.panel {
+  display: grid;
+  gap: 24px;
+  margin-top: 18px;
+  padding: 30px;
+}
+
+.sectionTitleRow {
+  display: flex;
+  gap: 16px;
+  align-items: start;
+  justify-content: space-between;
+}
+
+.lockBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 12px;
+  color: var(--ok);
+  background: #eaf7ee;
+  border: 1px solid #c7e7d0;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.journalList,
+.snippetList {
+  display: grid;
+  gap: 14px;
+}
+
+.journalCard {
+  display: grid;
+  gap: 8px;
+  max-width: 72ch;
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+}
+
+.fieldset,
+.checkboxFieldset {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.fieldset:disabled {
+  opacity: 0.72;
+}
+
+.fieldset legend,
+.checkboxFieldset legend {
+  margin-bottom: 12px;
+  color: var(--text);
+  font-weight: 800;
+}
+
+.radioList {
+  display: grid;
+  gap: 10px;
+}
+
+.choiceCard,
+.checkboxChoice {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.choiceCard {
+  padding: 16px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+
+.choiceCard:has(input:checked) {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(47, 95, 208, 0.12);
+}
+
+.choiceCard input,
+.checkboxChoice input {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  accent-color: var(--accent);
+  flex: 0 0 auto;
+}
+
+.textLabel {
+  display: grid;
+  gap: 8px;
+  color: var(--text);
+  font-weight: 800;
+}
+
+.textLabel em {
+  color: var(--muted);
+  font-style: normal;
+  font-weight: 600;
+}
+
+.textLabel input {
+  width: 100%;
+  height: 48px;
+  padding: 0 14px;
+  color: var(--text);
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  font: inherit;
+}
+
+.textLabel input:disabled {
+  color: var(--muted-strong);
+  background: var(--surface);
+}
+
+.snippetCard {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  background: #fffdf9;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+}
+
+.snippetText {
+  max-width: 72ch;
+  padding: 16px;
+  color: var(--text);
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  font-size: 1.03rem;
+}
+
+.checkboxGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 18px;
+}
+
+.checkboxChoice {
+  min-height: 42px;
+  padding: 10px 12px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.checkboxChoice:has(input:checked) {
+  border-color: var(--accent);
+  background: #f4f6ff;
+}
+
+.submitRow {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 4px;
+}
+
+.validationText {
+  font-size: 0.95rem;
+}
+
+@media (max-width: 760px) {
+  .shell {
+    padding: 24px 14px 48px;
+  }
+
+  .introCard,
+  .completeCard,
+  .panel {
+    border-radius: 18px;
+  }
+
+  .introCard,
+  .completeCard {
+    margin-top: 16px;
+    padding: 26px;
+  }
+
+  .panel {
+    padding: 20px;
+  }
+
+  .infoGrid,
+  .caseHeader,
+  .checkboxGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .infoGrid div {
+    min-height: auto;
+  }
+
+  .submitRow {
+    display: grid;
+    justify-items: start;
+  }
+}
