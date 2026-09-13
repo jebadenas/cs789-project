@@ -58,15 +58,35 @@ def _entries(cohort: str) -> pd.DataFrame:
 
     text = pd.read_parquet(_PARQUET, columns=["submission_id", "text"])
     text["submission_id"] = text["submission_id"].astype(str)
-    return ents.merge(text, on="submission_id", how="left")
+    merged = ents.merge(text, on="submission_id", how="left")
+
+    # Integrity fix (2026-09-09): collapse to one row per (team, member, submission).
+    # 2024_s2 shipped corrupted — (a) 241 parquet rows duplicated verbatim, and
+    # (b) journals 2 & 3 point at the SAME submission for ~all members — which
+    # inflated every 2024_s2 team's blob with repeated journal text (affects the
+    # frozen v1 + v2 marks for that cohort; see docs/qualitative/
+    # journal-data-dedup.md). Keeping the lowest journal_index removes the spurious
+    # journal 3; for the other cohorts (already one submission per journal) this only
+    # drops a handful of exact parquet dups.
+    merged = (merged.sort_values("journal_index")
+                    .drop_duplicates(["team_label", "member_label", "submission_id"],
+                                     keep="first")
+                    .reset_index(drop=True))
+    return merged
 
 
-def build_blob(cohort: str, team_label: str, seed: int | None = None) -> str:
+def build_blob(cohort: str, team_label: str, seed: int | None = None,
+               journal_indices: set[int] | None = None) -> str:
     """One structured blob for a team: members A..F, each journal in order.
 
     With ``seed`` set, the members are randomly re-labelled and re-ordered
     (deterministically per team+seed) — used by marking to run 3x so a mark can't
     depend on which member happens to be "A" or appears first.
+
+    With ``journal_indices`` set, only those journals are included — the primitive
+    for **per-sprint** coding (early-warning). ``None`` (default) keeps every journal,
+    so existing pooled callers are unchanged. Journal 1 is the intro reflection;
+    sprint *k* is ``journal_index == k + 1`` (see plans/journal-early-warning.md).
     """
     import random
 
@@ -82,6 +102,8 @@ def build_blob(cohort: str, team_label: str, seed: int | None = None) -> str:
 
     rows = []
     for _, r in team.iterrows():
+        if journal_indices is not None and int(r["journal_index"]) not in journal_indices:
+            continue
         body = (r["text"] or "").strip()
         if not body:
             continue
