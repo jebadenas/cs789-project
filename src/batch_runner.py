@@ -32,7 +32,9 @@ MODELS: dict[str, Callable[[ScoreMatrix], ModelResult]] = {
     # Cross-model Δ compares relative standing, so the baseline is put on a common
     # team mean of 10 (handoff-9b Task 2). For the absolute institutional weight
     # use baseline_cs399 (= baseline_average) — that is what RQ1's attack analysis
-    # must use.
+    # must use, and it is exposed by the interactive CLI (src.cli) under the
+    # distinct key "baseline-cs399". Here "baseline" means the *normalised* model;
+    # the two keys are intentionally different models — do not conflate them.
     "baseline": baseline_normalised,
     "peerrank-impute": peerrank_impute,
     "peerrank-exclude": peerrank_exclude,
