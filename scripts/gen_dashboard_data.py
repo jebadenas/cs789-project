@@ -93,60 +93,9 @@ def run_counts(runs, flag):
     return sum(1 for r in runs if (r.get("marks") or {}).get(flag) is True)
 
 
-# --- (#1) resegment glued text ------------------------------------------------
-# A minority of journals (~3.6% of 2025_s1 entries) were extracted with spaces
-# lost inside a passage ("Forexample,myPRfor..."). The model quoted that broken
-# text faithfully. Re-insert spaces for DISPLAY using a wordlist + DP (favour
-# long dictionary words). The proper fix is repairing the source before the
-# re-run; this just keeps the dashboard readable meanwhile.
-@functools.lru_cache(maxsize=1)
-def _wordset() -> set[str]:
-    ws: set[str] = set()
-    for p in ("/usr/share/dict/words", "/usr/dict/words"):
-        try:
-            with open(p, encoding="utf-8", errors="ignore") as fh:
-                ws = {w.strip().lower() for w in fh if w.strip()}
-            break
-        except OSError:
-            continue
-    ws |= {"a", "i"}  # single-letter words the list may omit
-    return ws
-
-
-def _split_glued(token: str) -> str:
-    """Split one alphabetic glued run into space-separated dictionary words."""
-    words = _wordset()
-    low = token.lower()
-    n = len(low)
-    NEG = float("-inf")
-    best = [0.0] + [NEG] * n          # best[i] = score of low[:i]
-    back = [0] * (n + 1)
-    for i in range(1, n + 1):
-        for j in range(max(0, i - 18), i):
-            seg = low[j:i]
-            score = len(seg) ** 2 if seg in words else -len(seg)  # reward long real words
-            if best[j] + score > best[i]:
-                best[i] = best[j] + score
-                back[i] = j
-    # reconstruct, preserving the ORIGINAL casing
-    pieces, i = [], n
-    while i > 0:
-        j = back[i]
-        pieces.append(token[j:i])
-        i = j
-    return " ".join(reversed(pieces))
-
-
-def resegment(text: str) -> str:
-    if not text:
-        return text
-    def fix(m: "re.Match[str]") -> str:
-        run = m.group(0)
-        # only touch long runs that aren't already a real word
-        if len(run) < 18 or run.lower() in _wordset():
-            return run
-        return _split_glued(run)
-    return re.sub(r"[A-Za-z]{18,}", fix, text)
+# (#1) glued-text repair now lives in the pipeline (textrepair), applied centrally
+# in blobs._entries; keep a display-time alias so old (pre-re-run) quotes still read.
+from src.qualitative.llm.textrepair import resegment  # noqa: E402
 
 
 # --- (#5) recover which member a quote came from ------------------------------
