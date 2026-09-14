@@ -20,14 +20,14 @@ export function QuestionnaireIntro() {
           Then, label a short set of snippets from the same case.
         </p>
         <div className={styles.infoGrid}>
-          <div><h2>Confidentiality</h2><p>Please do not share or copy any journal text from this exercise.</p></div>
-          <div><h2>Time</h2><p>Expect each case to take a few minutes in this mock version.</p></div>
-          <div><h2>Forward only</h2><p>Each submitted answer is locked and the questionnaire continues onward.</p></div>
+          <div><h2>Confidentiality</h2><p>The journals are anonymised. Please do not share or copy any text from this exercise.</p></div>
+          <div><h2>Time</h2><p>Each case takes a few minutes: read the journals, make a call, then label a few snippets.</p></div>
+          <div><h2>Forward only</h2><p>Each submitted answer is locked and the questionnaire moves on to the next step.</p></div>
         </div>
-        <button className={styles.primaryButton} type="button" onClick={() => router.replace(`/questionnaire/cases/${CASES[0].id}/triage`)}>
+        <button className={styles.primaryButton} type="button" onClick={() => router.replace(`/cases/${CASES[0].id}/triage`)}>
           Start questionnaire
         </button>
-        <p className={styles.demoNote}>Demo only: responses remain in this browser session and are not submitted to a server.</p>
+        <p className={styles.demoNote}>Your responses stay in this browser and are not yet saved to a server.</p>
       </section>
     </main>
   );
@@ -73,12 +73,12 @@ function isCaseComplete(caseData: (typeof CASES)[number], answer?: CaseAnswer) {
 function expectedPath(answers: Record<string, CaseAnswer>) {
   for (const caseData of CASES) {
     const answer = answers[caseData.id];
-    if (!answer?.triage) return `/questionnaire/cases/${caseData.id}/triage`;
-    if (!answer.rationaleSubmitted) return `/questionnaire/cases/${caseData.id}/rationale`;
+    if (!answer?.triage) return `/cases/${caseData.id}/triage`;
+    if (!answer.rationaleSubmitted) return `/cases/${caseData.id}/rationale`;
     const incompleteSnippet = caseData.snippets.findIndex((snippet) => !answer.snippets[snippet.id]?.length);
-    if (incompleteSnippet >= 0) return `/questionnaire/cases/${caseData.id}/snippet/${incompleteSnippet}`;
+    if (incompleteSnippet >= 0) return `/cases/${caseData.id}/snippet/${incompleteSnippet}`;
   }
-  return "/questionnaire/complete";
+  return "/complete";
 }
 
 function isEarlierCaseIncomplete(caseIndex: number, answers: Record<string, CaseAnswer>) {
@@ -96,7 +96,7 @@ export function TriagePage({ caseId }: { caseId: string }) {
     if (!hydrated) return;
     const progressState = getCaseProgress(caseId);
     const expected = expectedPath(answers);
-    if (!currentCase || progressState.index < 0 || isEarlierCaseIncomplete(progressState.index, answers) || expected !== `/questionnaire/cases/${caseId}/triage`) {
+    if (!currentCase || progressState.index < 0 || isEarlierCaseIncomplete(progressState.index, answers) || expected !== `/cases/${caseId}/triage`) {
       router.replace(expected);
     }
   }, [answers, caseId, currentCase, hydrated, router]);
@@ -107,7 +107,7 @@ export function TriagePage({ caseId }: { caseId: string }) {
     event.preventDefault();
     if (!value) return;
     setTriage(caseId, value);
-    router.replace(`/questionnaire/cases/${caseId}/rationale`);
+    router.replace(`/cases/${caseId}/rationale`);
   }
 
   return (
@@ -145,7 +145,7 @@ export function RationalePage({ caseId }: { caseId: string }) {
   useEffect(() => {
     if (!hydrated) return;
     const expected = expectedPath(answers);
-    if (!currentCase || progress.index < 0 || isEarlierCaseIncomplete(progress.index, answers) || expected !== `/questionnaire/cases/${caseId}/rationale`) router.replace(expected);
+    if (!currentCase || progress.index < 0 || isEarlierCaseIncomplete(progress.index, answers) || expected !== `/cases/${caseId}/rationale`) router.replace(expected);
   }, [answers, caseId, currentCase, hydrated, progress.index, router]);
 
   if (!currentCase || progress.index < 0) return null;
@@ -154,7 +154,7 @@ export function RationalePage({ caseId }: { caseId: string }) {
     event.preventDefault();
     setRationale(caseId, value);
     submitRationale(caseId);
-    router.replace(`/questionnaire/cases/${caseId}/snippet/0`);
+    router.replace(`/cases/${caseId}/snippet/0`);
   }
 
   return (
@@ -192,7 +192,7 @@ export function SnippetPage({ caseId, snippetIndex }: { caseId: string; snippetI
       return;
     }
     const expected = expectedPath(answers);
-    if (!answer?.rationaleSubmitted || isEarlierCaseIncomplete(progress.index, answers) || expected !== `/questionnaire/cases/${caseId}/snippet/${snippetIndex}`) {
+    if (!answer?.rationaleSubmitted || isEarlierCaseIncomplete(progress.index, answers) || expected !== `/cases/${caseId}/snippet/${snippetIndex}`) {
       router.replace(expected);
     }
   }, [answers, caseId, currentCase, hydrated, progress.index, router, snippet?.id, snippetIndex]);
@@ -221,7 +221,7 @@ export function SnippetPage({ caseId, snippetIndex }: { caseId: string; snippetI
     }
     setSnippetLabels(caseId, snippetData.id, selected);
     const next = snippetIndex + 1;
-    router.replace(next >= caseData.snippets.length ? `/questionnaire/cases/${caseId}/submitted` : `/questionnaire/cases/${caseId}/snippet/${next}`);
+    router.replace(next >= caseData.snippets.length ? `/cases/${caseId}/submitted` : `/cases/${caseId}/snippet/${next}`);
   }
 
   return (
@@ -265,7 +265,7 @@ export function SubmittedPage({ caseId }: { caseId: string }) {
   }, [answers, caseId, currentCase, hydrated, progress.index, router]);
 
   if (!currentCase || progress.index < 0) return null;
-  return <main className={styles.shell}><section className={styles.completeCard}><p className={styles.eyebrow}>Case {progress.number} of {progress.total}</p><h1>Case submitted</h1><p>Your response is complete for this case. This demo keeps it only in this browser session.</p><button className={styles.primaryButton} type="button" onClick={() => router.replace(isLast ? "/questionnaire/complete" : `/questionnaire/cases/${CASES[progress.index + 1].id}/triage`)}>{isLast ? "Finish questionnaire" : "Continue to next case"}</button></section></main>;
+  return <main className={styles.shell}><section className={styles.completeCard}><p className={styles.eyebrow}>Case {progress.number} of {progress.total}</p><h1>Case submitted</h1><p>Your response for this case is complete and locked.</p><button className={styles.primaryButton} type="button" onClick={() => router.replace(isLast ? "/complete" : `/cases/${CASES[progress.index + 1].id}/triage`)}>{isLast ? "Finish questionnaire" : "Continue to next case"}</button></section></main>;
 }
 
 export function CompletePage() {
@@ -275,13 +275,13 @@ export function CompletePage() {
   useEffect(() => {
     if (hydrated) {
       const expected = expectedPath(answers);
-      if (expected !== "/questionnaire/complete") router.replace(expected);
+      if (expected !== "/complete") router.replace(expected);
     }
   }, [answers, hydrated, router]);
 
-  if (!hydrated || expectedPath(answers) !== "/questionnaire/complete") {
+  if (!hydrated || expectedPath(answers) !== "/complete") {
     return <main className={styles.shell}><p className={styles.helpText}>Loading questionnaire…</p></main>;
   }
 
-  return <main className={styles.shell}><section className={styles.completeCard}><p className={styles.eyebrow}>Complete</p><h1>Thank you</h1><p>The questionnaire is complete. This demo did not send responses to a server.</p></section></main>;
+  return <main className={styles.shell}><section className={styles.completeCard}><p className={styles.eyebrow}>Complete</p><h1>Thank you</h1><p>You’ve completed the questionnaire. Thank you for taking the time to review these cases.</p></section></main>;
 }
