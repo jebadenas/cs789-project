@@ -63,9 +63,11 @@ def case_snippets(cohort: str, team_label: str, ji: int, runs) -> list[dict]:
     for f in EVID_ORDER:
         if not marks.get(f):
             continue
-        raws = sorted({(r.get("quotes") or {}).get(f, "").strip()
-                       for r in nonempty if r["marks"].get(f) and (r.get("quotes") or {}).get(f)},
-                      key=len, reverse=True)
+        texts = []
+        for r in nonempty:
+            if r["marks"].get(f):
+                texts += [it["text"] for it in sa.quote_items(r, f)]  # v1 str or v2 list
+        raws = sorted(set(texts), key=len, reverse=True)
         for q in raws:
             nq = _norm(q)
             if not nq or any(nq in s for s in seen):
@@ -76,7 +78,10 @@ def case_snippets(cohort: str, team_label: str, ji: int, runs) -> list[dict]:
 
 
 def main() -> None:
-    cells = sa.load_cells()
+    use_v2 = "--v2" in sys.argv
+    marks_dir = sa._MARKS_V2 if use_v2 else None
+    print(f"marks: {'v2 (evidence-grounded)' if use_v2 else 'v1'} — {marks_dir or sa._MARKS}")
+    cells = sa.load_cells(marks_dir)
     by_team: dict[str, dict[int, list]] = {}
     for (c, t, ji), runs in cells.items():
         if c == COHORT:

@@ -211,7 +211,10 @@ def load_summary(team, ji):
 
 
 def main():
-    cells = sa.load_cells()
+    use_v2 = "--v2" in sys.argv
+    marks_dir = sa._MARKS_V2 if use_v2 else None
+    print(f"marks: {'v2 (evidence-grounded)' if use_v2 else 'v1'} — {marks_dir or sa._MARKS}")
+    cells = sa.load_cells(marks_dir)
     tk = team_key(COHORT)
     ros = rosters()
     mtext = member_text_index(COHORT)   # (team, sprint) -> {member: journal text} for attribution
@@ -269,9 +272,8 @@ def main():
                 for r in nonempty:
                     if not r["marks"].get(f):
                         continue
-                    q = ((r.get("quotes") or {}).get(f) or "").strip()
-                    if q:
-                        raws.append(q)
+                    for it in sa.quote_items(r, f):   # v1 str or v2 member-tagged list
+                        raws.append(it["text"])
                 kept: list[str] = []
                 for q in sorted(set(raws), key=len, reverse=True):  # longest first
                     nq = _norm(q)

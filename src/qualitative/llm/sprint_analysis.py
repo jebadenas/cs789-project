@@ -17,9 +17,10 @@ from __future__ import annotations
 import json
 from collections import defaultdict
 
-from . import blobs, marking_sprint
+from . import blobs, marking_sprint, marking_sprint_v2
 
-_MARKS = marking_sprint._OUT
+_MARKS = marking_sprint._OUT            # v1 per-sprint marks (single quote string per flag)
+_MARKS_V2 = marking_sprint_v2._OUT      # v2 evidence-grounded marks (member-tagged quote list)
 _SUMM = blobs._REPO / "output/qualitative/llm/summaries_sprint"
 ITEMS = marking_sprint.ITEMS  # the 11 v1 binaries
 
@@ -44,10 +45,15 @@ CONTRIB = {"effort_imbalance", "member_under_contributed", "underperformance_una
 
 # ---- loading + consensus ---------------------------------------------------
 
-def load_cells() -> dict[tuple, list[dict]]:
-    """(cohort, team, journal_index) -> run records sorted by run."""
+def load_cells(marks_dir=None) -> dict[tuple, list[dict]]:
+    """(cohort, team, journal_index) -> run records sorted by run.
+
+    ``marks_dir`` selects which run's output to read (default v1 ``_MARKS``; pass
+    ``_MARKS_V2`` for the evidence-grounded re-run).
+    """
+    d = marks_dir or _MARKS
     cells: dict[tuple, list[dict]] = defaultdict(list)
-    for f in sorted(_MARKS.glob("*_r*.json")):
+    for f in sorted(d.glob("*_r*.json")):
         d = json.loads(f.read_text())
         cells[(d["cohort"], d["team_label"], d["journal_index"])].append(d)
     for recs in cells.values():
@@ -55,8 +61,33 @@ def load_cells() -> dict[tuple, list[dict]]:
     return cells
 
 
+def quote_items(run: dict, flag: str) -> list[dict]:
+    """Normalise a run's quotes for a flag to [{"text", "member"}], v1 OR v2 schema.
+
+    v1 stored one string per flag; v2 stores a list of {"member", "quote"} (the model
+    names the member and copies the quote verbatim). This flattens both so downstream
+    code is schema-agnostic.
+    """
+    q = (run.get("quotes") or {}).get(flag)
+    if not q:
+        return []
+    if isinstance(q, str):
+        return [{"text": q.strip(), "member": ""}] if q.strip() else []
+    out = []
+    for it in q if isinstance(q, list) else []:
+        if isinstance(it, dict) and (it.get("quote") or "").strip():
+            out.append({"text": it["quote"].strip(), "member": str(it.get("member", "")).strip()})
+        elif isinstance(it, str) and it.strip():
+            out.append({"text": it.strip(), "member": ""})
+    return out
+
+
 def consensus(runs: list[dict]) -> tuple[dict, dict]:
-    """Majority-of-3 per flag; a representative quote from a run that fired it."""
+    """Majority-of-3 per flag; a representative quote from a run that fired it.
+
+    Returns (marks, quotes) where quotes[flag] is a representative quote STRING
+    (back-compatible); works for both the v1 and v2 mark schemas.
+    """
     nonempty = [r for r in runs if r.get("marks")]
     marks, quotes = {}, {}
     for k in ITEMS:
@@ -64,9 +95,11 @@ def consensus(runs: list[dict]) -> tuple[dict, dict]:
         marks[k] = tc >= 2 if len(nonempty) >= 2 else tc >= 1
         if marks[k]:
             for r in nonempty:
-                if r["marks"].get(k) and (r.get("quotes") or {}).get(k):
-                    quotes[k] = r["quotes"][k]
-                    break
+                if r["marks"].get(k):
+                    items = quote_items(r, k)
+                    if items:
+                        quotes[k] = items[0]["text"]
+                        break
     return marks, quotes
 
 
