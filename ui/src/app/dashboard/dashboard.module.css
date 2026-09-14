@@ -715,6 +715,11 @@
   font-size: 0.76rem;
 }
 
+.quoteList {
+  display: grid;
+  gap: 8px;
+}
+
 .journalQuote {
   margin: 0;
   padding: 11px 13px;
@@ -724,6 +729,26 @@
   border-radius: 5px;
   font-size: 0.86rem;
   line-height: 1.55;
+}
+
+.quoteAuthor {
+  display: block;
+  margin-top: 6px;
+  font-style: normal;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* (#2) a positive/supportive signal reads green, not amber */
+.evidenceFlag.evidenceFlagPositive {
+  color: var(--good);
+  background: var(--good-bg);
+  border-color: #4ac26b66;
+}
+
+.evidenceCardPositive .journalQuote {
+  border-left-color: var(--good);
 }
 
 .emptyState {

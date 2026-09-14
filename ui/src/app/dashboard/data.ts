@@ -9,11 +9,18 @@ export type StatusMeta = {
   tone: "danger" | "warning" | "good";
 };
 
+export type Quote = {
+  text: string;
+  author?: string; // blinded per-team member label, e.g. "Member C"
+};
+
 export type EvidenceSnippet = {
   issue: string;
   text: string;
-  journalSnippet?: string;
+  positive?: boolean; // a supportive/healthy signal, not a concern
+  quotes: Quote[]; // one or more verbatim journal quotes, each attributed to a member
   source?: string;
+  journalSnippet?: string; // deprecated: kept so older data still renders
 };
 
 export type SprintFinding = {

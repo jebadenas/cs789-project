@@ -6,10 +6,11 @@ but name-safe and safe to commit. Keeps every type + helper in data.ts unchanged
 only the TEAMS array is replaced.
 """
 from __future__ import annotations
-import csv, glob, json, re, sys
+import csv, functools, glob, json, re, sys
 from pathlib import Path
 sys.path.insert(0, ".")
 from src.qualitative.llm import sprint_analysis as sa
+from src.qualitative.llm import blobs
 from scripts.blind_spot import peer_prefix, team_key
 
 COHORT = "2025_s1"
@@ -50,7 +51,9 @@ DESC = {
 }
 EVID_ORDER = ["open_conflict", "communication_breakdown", "leadership_problem",
               "underperformance_unaddressed", "effort_imbalance", "member_under_contributed",
-              "core_subgroup_carried", "singled_out_below", "singled_out_above", "mutual_support"]
+              "core_subgroup_carried", "singled_out_below", "singled_out_above",
+              "mutual_support", "harmonious_balanced"]
+POSITIVE = {"mutual_support", "harmonious_balanced"}
 # common English words that are also names — don't redact these (avoid mangling prose)
 STOP = {"will", "may", "mark", "grace", "art", "drew", "hope", "rose", "an", "so", "in",
         "on", "a", "the", "by", "van", "le", "lin", "don", "kim", "max"}
@@ -90,6 +93,85 @@ def run_counts(runs, flag):
     return sum(1 for r in runs if (r.get("marks") or {}).get(flag) is True)
 
 
+# --- (#1) resegment glued text ------------------------------------------------
+# A minority of journals (~3.6% of 2025_s1 entries) were extracted with spaces
+# lost inside a passage ("Forexample,myPRfor..."). The model quoted that broken
+# text faithfully. Re-insert spaces for DISPLAY using a wordlist + DP (favour
+# long dictionary words). The proper fix is repairing the source before the
+# re-run; this just keeps the dashboard readable meanwhile.
+@functools.lru_cache(maxsize=1)
+def _wordset() -> set[str]:
+    ws: set[str] = set()
+    for p in ("/usr/share/dict/words", "/usr/dict/words"):
+        try:
+            with open(p, encoding="utf-8", errors="ignore") as fh:
+                ws = {w.strip().lower() for w in fh if w.strip()}
+            break
+        except OSError:
+            continue
+    ws |= {"a", "i"}  # single-letter words the list may omit
+    return ws
+
+
+def _split_glued(token: str) -> str:
+    """Split one alphabetic glued run into space-separated dictionary words."""
+    words = _wordset()
+    low = token.lower()
+    n = len(low)
+    NEG = float("-inf")
+    best = [0.0] + [NEG] * n          # best[i] = score of low[:i]
+    back = [0] * (n + 1)
+    for i in range(1, n + 1):
+        for j in range(max(0, i - 18), i):
+            seg = low[j:i]
+            score = len(seg) ** 2 if seg in words else -len(seg)  # reward long real words
+            if best[j] + score > best[i]:
+                best[i] = best[j] + score
+                back[i] = j
+    # reconstruct, preserving the ORIGINAL casing
+    pieces, i = [], n
+    while i > 0:
+        j = back[i]
+        pieces.append(token[j:i])
+        i = j
+    return " ".join(reversed(pieces))
+
+
+def resegment(text: str) -> str:
+    if not text:
+        return text
+    def fix(m: "re.Match[str]") -> str:
+        run = m.group(0)
+        # only touch long runs that aren't already a real word
+        if len(run) < 18 or run.lower() in _wordset():
+            return run
+        return _split_glued(run)
+    return re.sub(r"[A-Za-z]{18,}", fix, text)
+
+
+# --- (#5) recover which member a quote came from ------------------------------
+def _norm(s: str) -> str:
+    return re.sub(r"\s+", "", (s or "")).lower()
+
+
+def member_text_index(cohort: str):
+    """(team_label, journal_index) -> {member_label: normalised journal text}."""
+    df = blobs._entries(cohort)
+    idx: dict[tuple[str, int], dict[str, str]] = {}
+    for _, r in df.iterrows():
+        idx.setdefault((r["team_label"], int(r["journal_index"])), {})[r["member_label"]] = _norm(r["text"])
+    return idx
+
+
+def quote_author(quote: str, per_member: dict[str, str]) -> str:
+    """Match a quote back to the member whose journal contains it (blinded label)."""
+    nq = _norm(quote)[:60]
+    if not nq:
+        return ""
+    owners = [m for m, t in per_member.items() if nq in t]
+    return f"Member {owners[0]}" if len(owners) == 1 else ""
+
+
 def load_summary(team, ji):
     for d in (CLUSTER_SUMM, SUMM):   # prefer the 72B cluster summary when present
         p = d / f"{COHORT}_{team}_j{ji}.json"
@@ -104,6 +186,7 @@ def main():
     cells = sa.load_cells()
     tk = team_key(COHORT)
     ros = rosters()
+    mtext = member_text_index(COHORT)   # (team, sprint) -> {member: journal text} for attribution
     by_team: dict[str, dict[int, list]] = {}
     for (c, t, ji), runs in cells.items():
         if c == COHORT:
@@ -144,12 +227,40 @@ def main():
                     issues.append(LABEL[f])
             positives = [LABEL[f] for f in ("harmonious_balanced", "mutual_support") if marks.get(f)]
 
+            per_member = mtext.get((t, ji), {})
+            nonempty = [r for r in runs if r.get("marks")]
             evidence = []
             for f in EVID_ORDER:
-                if marks.get(f) and (quotes.get(f) or "").strip() and len(evidence) < 5:
-                    q = scrub(quotes[f].strip(), toks)
-                    evidence.append({"issue": LABEL[f], "text": DESC[f],
-                                     "journalSnippet": q, "source": "Team journal"})
+                if not marks.get(f) or len(evidence) >= 6:
+                    continue
+                # (#6) gather DISTINCT quotes the fired runs gave for this flag.
+                # Runs often return overlapping quotes; collapse by substring so we
+                # don't show the same sentence twice — keep the longest variant.
+                raws: list[str] = []
+                for r in nonempty:
+                    if not r["marks"].get(f):
+                        continue
+                    q = ((r.get("quotes") or {}).get(f) or "").strip()
+                    if q:
+                        raws.append(q)
+                kept: list[str] = []
+                for q in sorted(set(raws), key=len, reverse=True):  # longest first
+                    nq = _norm(q)
+                    if any(nq in _norm(k) for k in kept):           # already covered
+                        continue
+                    kept.append(q)
+                qlist = []
+                for q in kept:
+                    q = resegment(scrub(q, toks))                    # (#1) fix glued text, (name-safe)
+                    author = quote_author(q, per_member)             # (#5) whose journal it's from
+                    qlist.append({"text": q, "author": author} if author else {"text": q})
+                if not qlist:
+                    continue
+                evidence.append({"issue": LABEL[f], "text": DESC[f],
+                                 "positive": f in POSITIVE,
+                                 "quotes": qlist[:3],          # cap snippets per flag
+                                 "journalSnippet": qlist[0]["text"],  # back-compat
+                                 "source": "Team journal"})
 
             summary = load_summary(t, ji) or (
                 "No significant team-dynamics concerns surfaced this sprint."

@@ -153,21 +153,45 @@ export default async function TeamPage({
             {finding.evidence.length > 0 ? (
               <>
                 <div className={styles.evidenceList}>
-                  {finding.evidence.map((evidence) => (
-                    <article className={styles.evidenceCard} key={`${evidence.issue}-${evidence.text}`}>
-                      <div className={styles.evidenceHeader}>
-                        <span className={styles.evidenceFlag}>{evidence.issue}</span>
-                        <span className={styles.evidenceSource}>{evidence.source ?? "Generated triage summary"}</span>
-                      </div>
-                      {evidence.journalSnippet ? (
-                        <blockquote className={styles.journalQuote}>
-                          “{evidence.journalSnippet}”
-                        </blockquote>
-                      ) : (
-                        <p className={styles.evidenceText}>{evidence.text}</p>
-                      )}
-                    </article>
-                  ))}
+                  {finding.evidence.map((evidence) => {
+                    const quotes =
+                      evidence.quotes && evidence.quotes.length > 0
+                        ? evidence.quotes
+                        : evidence.journalSnippet
+                          ? [{ text: evidence.journalSnippet }]
+                          : [];
+                    return (
+                      <article
+                        className={`${styles.evidenceCard} ${evidence.positive ? styles.evidenceCardPositive : ""}`}
+                        key={`${evidence.issue}-${evidence.text}`}
+                      >
+                        <div className={styles.evidenceHeader}>
+                          <span
+                            className={`${styles.evidenceFlag} ${evidence.positive ? styles.evidenceFlagPositive : ""}`}
+                          >
+                            {evidence.issue}
+                          </span>
+                          {quotes.length > 1 ? (
+                            <span className={styles.evidenceSource}>{quotes.length} journals</span>
+                          ) : null}
+                        </div>
+                        {quotes.length > 0 ? (
+                          <div className={styles.quoteList}>
+                            {quotes.map((quote, index) => (
+                              <blockquote className={styles.journalQuote} key={index}>
+                                “{quote.text}”
+                                {quote.author ? (
+                                  <cite className={styles.quoteAuthor}>— {quote.author}</cite>
+                                ) : null}
+                              </blockquote>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className={styles.evidenceText}>{evidence.text}</p>
+                        )}
+                      </article>
+                    );
+                  })}
                 </div>
               </>
             ) : (
