@@ -45,6 +45,11 @@ RULES:
 - Mark a feature present ONLY if you can quote text that DIRECTLY supports it.
 - If the supporting evidence is thin, absent, or only tangential, mark it not-present.
 - A positive or neutral quote must NOT be used to support a concern feature.
+- Every quote MUST be copied WORD-FOR-WORD from the journals — exact characters, no
+  paraphrasing, summarising, correcting, shortening, or joining separate sentences.
+  If you cannot copy an exact supporting sentence, the feature is NOT present.
+- For each quote, "member" is the letter of the Member whose journal you copied it from
+  (the "Member X" heading above that text). It must be one of the letters shown below.
 
 Items:
 - effort_imbalance: workload clearly uneven in AMOUNT this sprint (one/two did much more).
@@ -69,7 +74,7 @@ Items:
 
 Return ONLY a JSON object with exactly these 11 keys. Each value is an object:
   {{"value": <boolean>,
-    "quotes": [{{"member": "<letter>", "quote": "<verbatim quote that DIRECTLY supports it>"}}]}}
+    "quotes": [{{"member": "<letter>", "quote": "<exact word-for-word quote copied from that member's journal>"}}]}}
 Give 1-3 quotes when present; give an EMPTY list when not present (and then value MUST be false).
 
 TEAM JOURNALS (one sprint):
