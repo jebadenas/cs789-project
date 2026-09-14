@@ -163,13 +163,75 @@ def member_text_index(cohort: str):
     return idx
 
 
-def quote_author(quote: str, per_member: dict[str, str]) -> str:
-    """Match a quote back to the member whose journal contains it (blinded label)."""
+def quote_member(quote: str, per_member: dict[str, str]) -> str:
+    """Match a quote back to the member_label (A/B/…) whose journal contains it."""
     nq = _norm(quote)[:60]
     if not nq:
         return ""
     owners = [m for m, t in per_member.items() if nq in t]
-    return f"Member {owners[0]}" if len(owners) == 1 else ""
+    return owners[0] if len(owners) == 1 else ""
+
+
+def full_rosters() -> dict[str, set[str]]:
+    """real_team -> set of full proper-cased member names (from the peer CSVs)."""
+    out: dict[str, set[str]] = {}
+    for path in glob.glob(f"data/peer_sessions/{peer_prefix(COHORT)}*.csv"):
+        lines = open(path, encoding="utf-8", errors="replace").read().splitlines()
+        hdr = next((i for i, l in enumerate(lines) if l.startswith("Team,Name,Email")), None)
+        if hdr is None:
+            continue
+        for l in lines[hdr + 1:]:
+            if not l.strip() or l.startswith("Question") or l.startswith("Summary"):
+                break
+            row = next(csv.reader([l]))
+            if len(row) < 2 or not row[0].strip().startswith("Team"):
+                continue
+            out.setdefault(row[0].strip(), set()).add(row[1].strip())
+    return out
+
+
+def _first_last(name: str) -> str:
+    """Roster names are 'Last, First' — show them as 'First Last'."""
+    if "," in name:
+        last, first = (p.strip() for p in name.split(",", 1))
+        return f"{first} {last}".strip()
+    return name
+
+
+def _match_proper(normalised: str, fullnames: set[str]) -> str:
+    """Match a Canvas 'lastfirst' normalised name to a proper roster name."""
+    from itertools import permutations
+    key = re.sub(r"[^a-z]", "", (normalised or "").lower())
+    for fn in fullnames:
+        toks = [t for t in re.split(r"[\s,]+", fn) if t]
+        if len(toks) <= 4:
+            for p in permutations(toks):
+                if re.sub(r"[^a-z]", "", "".join(p).lower()) == key:
+                    return _first_last(fn)
+    return (normalised or "").title()  # fallback: title-case the raw form
+
+
+@functools.lru_cache(maxsize=1)
+def name_index() -> dict:
+    """(team_label, member_label) -> real display name, via the anon_id crosswalk.
+
+    The dashboard is a local-only coordinator tool, so it shows real names (user
+    decision). The questionnaire uses the blinded 'Member X' labels instead — the
+    two consumers pick the label they want from the same match. Names are cleaned
+    to proper 'First Last' by matching each member to their peer-roster name.
+    """
+    import pandas as pd
+    tk = team_key(COHORT)
+    fr = full_rosters()
+    ent = blobs._entries(COHORT)[["team_label", "member_label", "anon_id"]].drop_duplicates()
+    cx = pd.read_csv("data/journals/crosswalk/name_to_anon.csv")
+    cx = cx[cx["cohort"] == COHORT][["anon_id", "normalised_name"]]
+    m = ent.merge(cx, on="anon_id", how="left")
+    out = {}
+    for _, r in m.iterrows():
+        proper = _match_proper(r["normalised_name"] or "", fr.get(tk.get(r["team_label"], ""), set()))
+        out[(r["team_label"], r["member_label"])] = proper
+    return out
 
 
 def load_summary(team, ji):
@@ -187,6 +249,7 @@ def main():
     tk = team_key(COHORT)
     ros = rosters()
     mtext = member_text_index(COHORT)   # (team, sprint) -> {member: journal text} for attribution
+    names = name_index()                # (team, member) -> real name (dashboard shows real names)
     by_team: dict[str, dict[int, list]] = {}
     for (c, t, ji), runs in cells.items():
         if c == COHORT:
@@ -252,7 +315,8 @@ def main():
                 qlist = []
                 for q in kept:
                     q = resegment(scrub(q, toks))                    # (#1) fix glued text, (name-safe)
-                    author = quote_author(q, per_member)             # (#5) whose journal it's from
+                    mlabel = quote_member(q, per_member)             # (#5) whose journal it's from
+                    author = names.get((t, mlabel), "") if mlabel else ""  # dashboard: real name
                     qlist.append({"text": q, "author": author} if author else {"text": q})
                 if not qlist:
                     continue
