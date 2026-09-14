@@ -21,6 +21,23 @@ the **applications** (a coordinator dashboard + a tutor questionnaire). British/
   dynamics (leadership 96%, open_conflict 96%, comms 91%) are the most reliable and fire
   selectively. Sparsity worry disproven. `docs/qualitative/llm-per-sprint-reliability.md`.
 
+### Data-quality audit + reliability≠validity (NEW, 2026-09-14)
+Reviewing the dashboard evidence surfaced that the per-sprint **marks are reliable but
+their cited quotes often are not**: across 348 fired flags (2025_s1), **69% had the 3 runs
+return different supporting quotes**, and a minority attach a quote that contradicts the
+flag (e.g. `effort_imbalance` fired with a "team is happy/balanced" quote; `core_subgroup_
+carried` fired on an even frontend/backend split). Reliability ≠ validity.
+- Fixed now (no re-run): glued-text repair (3.6% of journals, centralised in
+  `blobs._entries`), member attribution (96.5% of quotes map to one member), multi-quote
+  evidence, green positives — see `docs/qualitative/per-sprint-data-quality-findings.md`.
+- **Dashboard shows real names** (local tool; via the `anon_id` crosswalk). **Questionnaire
+  is fully anonymised** (`src/qualitative/llm/anonymise.py` → 0/634 own-team leaks; emails +
+  UPIs stripped) with real anonymised cases fed in (`scripts/gen_survey_data.py`).
+- **Evidence-grounded re-run (built, needs cluster auth):** `marking_sprint_v2` (step
+  `sprint_v2`, `slurm/journal_sprint_v2.sh`) — a flag fires only with a directly-supporting
+  verbatim quote, 1–3 quotes per flag each tagged with its Member, tightened definitions;
+  writes `marks_sprint_v2/` for a v1-vs-v2 reliability **and validity** comparison.
+
 ### The headline direction: journals vs peer scores DON'T MATCH (blind spot)
 Peer assessment measures *contribution*; it is structurally blind to a team that
 contributes evenly yet is falling apart (conflict / comms / leadership). Journals see that.

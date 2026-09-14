@@ -72,6 +72,12 @@ def _entries(cohort: str) -> pd.DataFrame:
                     .drop_duplicates(["team_label", "member_label", "submission_id"],
                                      keep="first")
                     .reset_index(drop=True))
+
+    # Repair journals extracted with lost internal spaces (~3.6% of entries) so every
+    # downstream consumer — the per-sprint marking blob, the dashboard, the
+    # questionnaire — reads clean text (see textrepair; docs/qualitative).
+    from . import textrepair
+    merged["text"] = merged["text"].map(lambda t: textrepair.resegment(t) if isinstance(t, str) else t)
     return merged
 
 

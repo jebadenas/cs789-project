@@ -27,6 +27,7 @@ __pycache__/
 **/node_modules
 **/.next
 ui/src/app/dashboard/teams.data.json
+survey/src/app/cases.data.json
 
 # R session cruft
 .Rhistory
