@@ -1,7 +1,11 @@
+/* Questionnaire — aligned to the Team Health dashboard (GitHub / Primer):
+   subtle borders, small radii, no gradients or heavy shadows, calm headings. */
+
 .shell {
-  width: min(100%, 1120px);
+  width: min(100%, 900px);
   margin: 0 auto;
-  padding: 40px 20px 72px;
+  padding-block: 32px 64px;
+  padding-inline: 16px;
 }
 
 .introCard,
@@ -9,24 +13,23 @@
 .panel {
   background: var(--card);
   border: 1px solid var(--line);
-  border-radius: 24px;
-  box-shadow: 0 20px 70px rgba(30, 36, 45, 0.08);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(31, 35, 40, 0.04);
 }
 
 .introCard {
   display: grid;
-  gap: 28px;
-  max-width: 880px;
-  margin: 48px auto 0;
-  padding: 48px;
+  gap: 20px;
+  margin-top: 24px;
+  padding: 32px;
 }
 
 .completeCard {
   display: grid;
-  gap: 18px;
-  max-width: 680px;
-  margin: 84px auto 0;
-  padding: 44px;
+  gap: 14px;
+  max-width: 620px;
+  margin: 56px auto 0;
+  padding: 36px;
   text-align: center;
 }
 
@@ -36,68 +39,69 @@
 
 .eyebrow,
 .partLabel {
-  margin: 0 0 8px;
+  margin: 0 0 6px;
   color: var(--muted);
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
 .shell h1 {
   margin: 0;
   color: var(--text);
-  font-size: clamp(2rem, 5vw, 4rem);
-  line-height: 0.98;
-  letter-spacing: -0.05em;
+  font-size: clamp(1.5rem, 3vw, 2.05rem);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
 }
 
 .shell h2 {
   margin: 0;
   color: var(--text);
-  font-size: clamp(1.35rem, 2vw, 1.8rem);
-  letter-spacing: -0.03em;
+  font-size: 1.2rem;
+  letter-spacing: -0.01em;
 }
 
 .shell h3 {
   margin: 0;
   color: var(--text);
-  font-size: 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
 }
 
 .lede {
-  max-width: 760px;
+  max-width: 68ch;
   margin: 0;
   color: var(--muted-strong);
-  font-size: 1.2rem;
-  line-height: 1.65;
+  font-size: 1.02rem;
+  line-height: 1.6;
 }
 
 .infoGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+  gap: 12px;
 }
 
 .infoGrid div {
-  min-height: 150px;
-  padding: 20px;
+  padding: 16px;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 18px;
+  border-radius: 8px;
 }
 
 .infoGrid h2 {
-  margin-bottom: 8px;
-  font-size: 1rem;
-  letter-spacing: -0.01em;
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0;
 }
 
 .demoNote,
 .forwardNote,
 .validationError {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   line-height: 1.5;
 }
 
@@ -107,8 +111,8 @@
 }
 
 .validationError {
-  color: #a40e26;
-  font-weight: 700;
+  color: var(--danger);
+  font-weight: 600;
 }
 
 .panel form {
@@ -124,102 +128,110 @@
 .validationText {
   margin: 0;
   color: var(--muted-strong);
-  line-height: 1.65;
+  line-height: 1.6;
+}
+
+.helpText {
+  color: var(--muted);
+  font-size: 0.92rem;
 }
 
 .actionRow {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
   align-items: center;
 }
 
+/* buttons — GitHub-style: 6px radius, compact, solid accent */
 .primaryButton,
 .secondaryButton {
   justify-self: start;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 48px;
-  padding: 0 22px;
-  border-radius: 999px;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 6px;
   font: inherit;
-  font-weight: 750;
+  font-weight: 600;
   cursor: pointer;
-  transition: background 160ms ease, transform 160ms ease, opacity 160ms ease;
+  transition: background 120ms ease, border-color 120ms ease, opacity 120ms ease;
 }
 
 .primaryButton {
-  color: white;
+  color: #ffffff;
   background: var(--accent);
-  border: 0;
+  border: 1px solid rgba(31, 35, 40, 0.15);
 }
 
 .secondaryButton {
   color: var(--text);
-  background: white;
+  background: var(--card);
   border: 1px solid var(--line);
-}
-
-.primaryButton:hover:not(:disabled),
-.secondaryButton:hover {
-  transform: translateY(-1px);
 }
 
 .primaryButton:hover:not(:disabled) {
   background: var(--accent-hover);
 }
 
+.secondaryButton:hover {
+  background: var(--surface);
+  border-color: var(--muted);
+}
+
 .primaryButton:disabled {
-  opacity: 0.46;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
+/* case header + progress */
 .caseHeader {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(220px, 320px);
-  gap: 24px;
+  grid-template-columns: minmax(0, 1fr) minmax(200px, 300px);
+  gap: 20px;
   align-items: end;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .caseHeader h1 {
-  font-size: clamp(2rem, 4vw, 3.4rem);
+  font-size: clamp(1.4rem, 2.5vw, 1.9rem);
 }
 
 .progressStack {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .progress {
   position: relative;
-  height: 12px;
+  height: 8px;
   overflow: hidden;
-  background: #e4e0d8;
+  background: var(--neutral-bg);
   border-radius: 999px;
-}
-
-.progressText {
-  margin: 0;
-  color: var(--muted-strong);
-  font-size: 0.9rem;
-  font-weight: 700;
-  text-align: right;
 }
 
 .progressFill {
   position: absolute;
   inset: 0 auto 0 0;
-  background: linear-gradient(90deg, var(--accent), #7b8fff);
+  background: var(--accent);
   border-radius: inherit;
+  transition: width 200ms ease;
+}
+
+.progressText {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-align: right;
 }
 
 .panel {
   display: grid;
-  gap: 24px;
-  margin-top: 18px;
-  padding: 30px;
+  gap: 18px;
+  margin-top: 16px;
+  padding: 24px;
 }
 
 .sectionTitleRow {
@@ -232,32 +244,36 @@
 .lockBadge {
   display: inline-flex;
   align-items: center;
-  min-height: 30px;
-  padding: 0 12px;
-  color: var(--ok);
-  background: #eaf7ee;
-  border: 1px solid #c7e7d0;
+  min-height: 24px;
+  padding: 0 10px;
+  color: var(--good);
+  background: var(--good-bg);
+  border: 1px solid rgba(26, 127, 55, 0.3);
   border-radius: 999px;
-  font-size: 0.82rem;
-  font-weight: 800;
+  font-size: 0.76rem;
+  font-weight: 600;
 }
 
 .journalList,
 .snippetList {
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
 .journalCard {
   display: grid;
-  gap: 8px;
-  max-width: 72ch;
-  padding: 20px;
+  gap: 6px;
+  padding: 16px;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 18px;
+  border-radius: 8px;
 }
 
+.journalCard p {
+  font-size: 0.92rem;
+}
+
+/* fieldsets + choices */
 .fieldset,
 .checkboxFieldset {
   min-inline-size: 0;
@@ -272,41 +288,48 @@
 
 .fieldset legend,
 .checkboxFieldset legend {
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   color: var(--text);
-  font-weight: 800;
+  font-weight: 600;
 }
 
 .radioList {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .choiceCard,
 .checkboxChoice {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   align-items: flex-start;
   color: var(--text);
   cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease;
 }
 
 .choiceCard {
-  padding: 16px;
-  background: white;
+  padding: 12px 14px;
+  background: var(--card);
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: 6px;
 }
 
-.choiceCard:has(input:checked) {
+.choiceCard:hover,
+.checkboxChoice:hover {
+  border-color: var(--muted);
+}
+
+.choiceCard:has(input:checked),
+.checkboxChoice:has(input:checked) {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(47, 95, 208, 0.12);
+  background: rgba(9, 105, 218, 0.06);
 }
 
 .choiceCard input,
 .checkboxChoice input {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   margin-top: 2px;
   accent-color: var(--accent);
   flex: 0 0 auto;
@@ -314,26 +337,32 @@
 
 .textLabel {
   display: grid;
-  gap: 8px;
+  gap: 6px;
   color: var(--text);
-  font-weight: 800;
+  font-weight: 600;
 }
 
 .textLabel em {
   color: var(--muted);
   font-style: normal;
-  font-weight: 600;
+  font-weight: 400;
 }
 
 .textLabel input {
   width: 100%;
-  height: 48px;
-  padding: 0 14px;
+  height: 40px;
+  padding: 0 12px;
   color: var(--text);
-  background: white;
+  background: var(--card);
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: 6px;
   font: inherit;
+}
+
+.textLabel input:focus {
+  border-color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.15);
 }
 
 .textLabel input:disabled {
@@ -341,42 +370,39 @@
   background: var(--surface);
 }
 
+/* snippet card */
 .snippetCard {
   display: grid;
-  gap: 16px;
-  padding: 20px;
-  background: #fffdf9;
+  gap: 12px;
+  padding: 16px;
+  background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 18px;
+  border-radius: 8px;
 }
 
 .snippetText {
   max-width: 72ch;
-  padding: 16px;
+  padding: 14px 16px;
   color: var(--text);
-  background: white;
+  background: var(--card);
   border: 1px solid var(--line);
-  border-radius: 14px;
-  font-size: 1.03rem;
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+  font-size: 0.98rem;
 }
 
 .checkboxGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px 18px;
+  gap: 8px 16px;
 }
 
 .checkboxChoice {
-  min-height: 42px;
-  padding: 10px 12px;
-  background: white;
+  min-height: 40px;
+  padding: 8px 12px;
+  background: var(--card);
   border: 1px solid var(--line);
-  border-radius: 12px;
-}
-
-.checkboxChoice:has(input:checked) {
-  border-color: var(--accent);
-  background: #f4f6ff;
+  border-radius: 6px;
 }
 
 .submitRow {
@@ -388,38 +414,32 @@
 }
 
 .validationText {
-  font-size: 0.95rem;
+  font-size: 0.9rem;
 }
 
 @media (max-width: 760px) {
   .shell {
-    padding: 24px 14px 48px;
+    padding-block: 20px 40px;
   }
 
-  .introCard,
-  .completeCard,
-  .panel {
-    border-radius: 18px;
-  }
-
-  .introCard,
-  .completeCard {
-    margin-top: 16px;
-    padding: 26px;
-  }
-
-  .panel {
+  .introCard {
+    margin-top: 12px;
     padding: 20px;
+  }
+
+  .completeCard {
+    margin-top: 24px;
+    padding: 24px;
+  }
+
+  .panel {
+    padding: 18px;
   }
 
   .infoGrid,
   .caseHeader,
   .checkboxGrid {
     grid-template-columns: 1fr;
-  }
-
-  .infoGrid div {
-    min-height: auto;
   }
 
   .submitRow {
