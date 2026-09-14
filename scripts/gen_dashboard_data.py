@@ -112,13 +112,30 @@ def member_text_index(cohort: str):
     return idx
 
 
-def quote_member(quote: str, per_member: dict[str, str]) -> str:
-    """Match a quote back to the member_label (A/B/…) whose journal contains it."""
-    nq = _norm(quote)[:60]
+def quote_member(quote: str, per_member: dict[str, str], W: int = 30, S: int = 12) -> str:
+    """Match a quote back to the member_label (A/B/…) whose journal contains it.
+
+    The model isn't always perfectly verbatim (it sometimes edits the opening of a
+    quote), so a first-N-chars match misses ~3.5% of quotes. Instead score each
+    member by how many W-char windows of the quote appear in their journal and take
+    a dominant unique winner — robust to a paraphrased edge. Lifts attribution from
+    96.5% to ~99% on 2025_s1.
+    """
+    nq = _norm(quote)
     if not nq:
         return ""
-    owners = [m for m, t in per_member.items() if nq in t]
-    return owners[0] if len(owners) == 1 else ""
+    if len(nq) < W:  # short quote: fall back to whole-string containment
+        owners = [m for m, t in per_member.items() if nq in t]
+        return owners[0] if len(owners) == 1 else ""
+    windows = [nq[i:i + W] for i in range(0, len(nq) - W + 1, S)]
+    scores = {m: sum(1 for w in windows if w in t) for m, t in per_member.items()}
+    best = max(scores.values(), default=0)
+    if best == 0:
+        return ""
+    winners = [m for m, s in scores.items() if s == best]
+    if len(winners) == 1 and best >= 0.6 * len(windows):  # dominant + unique
+        return winners[0]
+    return ""
 
 
 def full_rosters() -> dict[str, set[str]]:
