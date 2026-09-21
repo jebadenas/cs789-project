@@ -26,10 +26,19 @@ __pycache__/
 # Next.js apps
 **/node_modules
 **/.next
+**/*.tsbuildinfo
 ui/src/app/dashboard/teams.data.json
+ui/src/app/dashboard/cohorts.data.json
 survey/src/app/cases.data.json
+
+# prototypes — contain real journal quotes and names, never commit
+prototypes/
+
+# Claude Code internal config
+.claude/settings.json
+.claude/settings.local.json
+.claude/worktrees/
 
 # R session cruft
 .Rhistory
 .Rproj.user/
-ui/src/app/dashboard/cohorts.data.json
