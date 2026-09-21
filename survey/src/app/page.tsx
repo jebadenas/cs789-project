@@ -1,5 +1,5 @@
-import { QuestionnaireIntro } from "./components";
+import { Questionnaire } from "./questionnaire";
 
 export default function Home() {
-  return <QuestionnaireIntro />;
+  return <Questionnaire />;
 }
