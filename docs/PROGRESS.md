@@ -1,4 +1,4 @@
-# Progress log — research + applications (2026-09-13)
+# Progress log — research + applications (2026-09-21)
 
 A single "where we are / how to pick it back up" note spanning the two strands: the
 **research** (does a journal-reading LLM surface team trouble the peer scores miss?) and
@@ -16,10 +16,13 @@ the **applications** (a coordinator dashboard + a tutor questionnaire). British/
   `conflict_handling` fixed by a gate+follow-up rewrite (55→80%), `trajectory` did not
   improve (report gate-only). `docs/qualitative/llm-reliability-diagnosis.md`,
   `llm-reliability-v2-results.md`.
-- **Per-sprint reliability (NEW):** all 11 v1 binaries code reliably per (team, sprint)
+- **Per-sprint reliability:** all 11 v1 binaries code reliably per (team, sprint)
   — 86–96% run-to-run over 433 cells, job 16854 (1299 marks, 0 failed). The value
   dynamics (leadership 96%, open_conflict 96%, comms 91%) are the most reliable and fire
-  selectively. Sparsity worry disproven. `docs/qualitative/llm-per-sprint-reliability.md`.
+  selectively. `docs/qualitative/llm-per-sprint-reliability.md`.
+- **Per-sprint 72B summaries: DONE.** `marks_summary/` contains 493 files covering all 5
+  cohorts. The dashboard reads them automatically. (Was listed as pending in the Sep-13
+  version of this doc; since confirmed complete.)
 
 ### Data-quality audit + reliability≠validity (NEW, 2026-09-14)
 Reviewing the dashboard evidence surfaced that the per-sprint **marks are reliable but
@@ -63,10 +66,10 @@ ethics scope for retrospective tutor reading. (`plans/dashboard-study-design.md`
 
 ### Pipeline (code)
 `src/qualitative/llm/`: `blobs` (per-sprint blob), `marking`/`marking_v2` (whole-project),
-`marking_sprint` (11 binaries ×3 shuffled), `marking_summary` (72B per-sprint summary —
-built, NOT yet run on cluster), `sprint_analysis` (consensus + per-flag reliability + local
-summaries), `run` (steps: notes/aggregate/mark/mark_v2/sprint/summarize). Cluster jobs in
-`slurm/journal_*.sh`. Analysis scripts in `scripts/`.
+`marking_sprint`/`marking_sprint_v2` (11 binaries ×3 shuffled), `marking_summary` (72B
+per-sprint summary — DONE, 493 files), `sprint_analysis` (consensus + per-flag reliability
++ local summaries), `run` (steps: notes/aggregate/mark/mark_v2/sprint/summarize). Cluster
+jobs in `slurm/journal_*.sh`. Analysis scripts in `scripts/`.
 
 ### Cluster gotchas (all baked into the slurm scripts)
 Host `foscsmlprd01`, user `jbad180`, model on `/data/jbad180`. VPN drops often (re-open the
@@ -75,10 +78,10 @@ py3.11 headers; `CUDA_HOME`→pip nvidia-cu13 wheel; `VLLM_USE_FLASHINFER_SAMPLE
 `VLLM_ATTENTION_BACKEND=FLASH_ATTN`. Large `hf download` stalls on the proxy — use `wget -c`.
 
 ### Next research steps
-1. Run the **72B per-sprint summaries** (`sbatch slurm/journal_summary.sh`, ~433 calls),
-   pull `marks_summary/` back → dashboard swaps to them automatically.
-2. Deepen the **journal-vs-peer mismatch** analysis (above).
-3. Recruit tutors + run the validation study.
+1. Deepen the **journal-vs-peer mismatch** analysis — characterise where/why they diverge.
+2. Recruit tutors + run the validation study (questionnaire app is ready).
+3. Run the **per-sprint early-warning pilot** on one cohort (`plans/journal-early-warning.md`
+   Phase-2) — needs a cluster run with `marking_sprint_v2`.
 
 ---
 
@@ -87,28 +90,47 @@ py3.11 headers; `CUDA_HOME`→pip nvidia-cu13 wheel; `VLLM_USE_FLASHINFER_SAMPLE
 Two **separate** Next.js 16 apps (Primer / GitHub design system), each its own dev server.
 
 ### Dashboard — `ui/` (port 3000)
-Coordinator view. `/` → `/dashboard` → current sprint. One page type: `/dashboard/sprints/[id]`
-(full breakdown, clickable stat filters) + `/dashboard/teams/[id]?sprint=` (profile-style,
-sprint trajectory strip). Real data for cohort **2025_s1** (24 teams × 4 sprints).
-- **Data flow (decoupled):** marks → `scripts/gen_dashboard_data.py` → `ui/src/app/dashboard/teams.data.json` → `data.ts` imports it. The JSON is **gitignored** (student names) — regenerate locally.
+Coordinator view. Routes under `/dashboard/[cohortId]/` — cohort selector on landing page.
+Sub-routes: `/sprints/[id]` (full breakdown, clickable stat filters),
+`/teams/[id]?sprint=` (profile-style, sprint trajectory strip),
+`/queue/[id]` (sprint-level triage queue). Real data for cohort **2025_s1** (24 teams ×
+4 sprints), 72B summaries loaded.
+- **Data flow (decoupled):** marks → `scripts/gen_dashboard_data.py` → `ui/src/app/dashboard/teams.data.json` + `cohorts.data.json` → `data.ts` imports them. Both JSONs are **gitignored** (student names) — regenerate locally.
 - Run: `cd ui && pnpm install && pnpm dev`. See `ui/README.md`.
 
 ### Survey / questionnaire — `survey/` (port 3001)
-Standalone tutor exercise: `/` intro → `/cases/[caseId]/triage` → `/snippet/[i]` →
-`/rationale` → `/submitted` → `/complete`. Currently synthetic case data. Design to be
-finished later. Run: `cd survey && pnpm install && pnpm dev -p 3001`. See `survey/README.md`.
+Tutor exercise app. **v2 architecture** — multi-session, non-linear Part 1, resumable Part 2.
+
+**Screen flow:**
+```
+Intro → Home (contents) → Part 1 hub (case list, any order) → Triage screen
+     └→ Part 2 (snippet queue, sequential, Back button) → Complete & export (zip)
+```
+
+**Key behaviours:**
+- localStorage persistence — survives browser close, resumes exactly where left off.
+- Part 1 freely editable until the moment Part 2 is first entered; then locks entirely.
+- Part 2: Back button revises the immediately-previous snippet only.
+- Journal text rendered with `renderJournalText` — section headers, week dividers, Team
+  Dynamics section highlighted; Time Sheet section suppressed; template prompts muted.
+- Zip export (JSON + CSV in one download) via JSZip.
+
+**Data:** `survey/src/app/cases.data.json` — **gitignored** (blinded journal content).
+Regenerate: `python3 -m scripts.gen_survey_data`. Design docs: `plans/ui-design-brief.md`,
+`plans/questionnaire-v2-plan.md`, `plans/questionnaire-v2-design-brief.md`.
 
 ### Standalone HTML prototypes (superseded by the apps)
 `prototypes/*.html` (gitignored — contain real names) via `scripts/build_dashboard.py`.
 
 ### Next app steps
-Swap in 72B summaries when ready; finish the questionnaire design; (optional) wire all four
-cohorts / a cohort selector into the dashboard.
+- Wire in non-anonymised data path for the live cohort (see `plans/questionnaire-v2-plan.md` §8).
+- Recruit tutors; deploy the questionnaire for the validation study.
 
 ---
 
 ## Privacy
 Never committed: `data/**`, `output/**`, `ui/src/app/dashboard/teams.data.json`,
+`ui/src/app/dashboard/cohorts.data.json`, `survey/src/app/cases.data.json`,
 `prototypes/*.html`, the crosswalk. Real names live only in gitignored local files. The
 dashboard is a local tool (names kept by deliberate decision); research outputs are
 name-scrubbed or aggregate.
