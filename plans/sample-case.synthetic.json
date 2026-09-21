@@ -1,0 +1,57 @@
+{
+  "_note": "SYNTHETIC sample for UI design only. No real student content. Safe to upload to design tools. Matches the survey app's case shape. `toolFlag`/`isControl` are the hidden fields the tutor must NOT see; shown here only so the designer knows they travel in the data.",
+  "id": "team_7-j3",
+  "sprint": 3,
+  "journals": [
+    {
+      "member": "Member A",
+      "text": "Sprint 3 was probably our roughest yet. We set out to get the payments flow and the admin dashboard both to a demo-able state, and on paper we split that cleanly — two of us on payments, two on the dashboard, and Member E floating to help wherever. What actually happened is that I ended up carrying most of the payments integration on my own over the last weekend because the person I was paired with hadn't really started their half by Thursday. I don't want to make it a bigger deal than it is, and it did work for the demo, but I was up until 2am on Sunday stitching the Stripe webhooks together and writing the tests that should have been shared. I raised it gently in standup on Monday and it was fine, no drama, but I'm a bit worried this is becoming a pattern rather than a one-off. The dashboard side seems to have gone smoothly from what I can tell."
+    },
+    {
+      "member": "Member B",
+      "text": "Good sprint on the dashboard side. Member C and I got into a really nice rhythm — we pair-programmed most of the filtering and the CSV export and it just clicked. Honestly the best two days of the project so far; when one of us got stuck the other picked it up straight away and we kept the momentum. We finished a day early and spent the extra time cleaning up the component library so the rest of the team can reuse it. I know payments had a harder time of it but I wasn't close enough to that side to say what happened. If anything I'd like us to rotate pairs next sprint so the good habits spread out a bit."
+    },
+    {
+      "member": "Member C",
+      "text": "This sprint went well for me. The dashboard came together and pairing with Member B worked really well — we cover each other's blind spots. I did notice the mood was a bit off in the Monday standup and I think it was to do with payments, but I didn't want to pry into someone else's part in front of the whole team. My only reflection for myself is that I should probably look up from my own tasks more often; I was heads-down on the export code and didn't clock that the other pair was struggling until it was basically done. Next sprint I'll try to check in across the team more, not just with the person I'm paired with."
+    },
+    {
+      "member": "Member D",
+      "text": "I'll be honest, this sprint got away from me. I had two assignments due for other courses in the same week and I underestimated how long the refund logic would take, so I came into the weekend with barely anything done on my half of payments. Member A basically rescued it and I feel pretty bad about that — it's not the first time I've been the one catching up at the end and I know it. It's not that I don't care about the project, it's that I keep over-committing and then the capstone is the thing that slips because it doesn't have a hard weekly deadline. I've blocked out time next sprint and I've told Member A I'll take the less coupled tasks so I'm not a bottleneck for anyone else. I want to fix this."
+    },
+    {
+      "member": "Member E",
+      "text": "Floating role this sprint, which suited me. I helped Member A with the payments tests on Saturday once it was clear that side was behind, and earlier in the week I did some of the dashboard styling so B and C could focus on the logic. It's a bit hard to reflect on my own contribution when I'm spread across everything, but I think the team functions best when someone is willing to plug gaps. I'd say the only real friction this sprint was around payments timing, and I think it's already being talked about openly, which is a good sign. Communication overall was fine — we were all responsive on the group chat even over the weekend."
+    }
+  ],
+  "snippets": [
+    {
+      "id": "team_7-j3-s1",
+      "text": "I ended up carrying most of the payments integration on my own over the last weekend because the person I was paired with hadn't really started their half by Thursday.",
+      "member": "Member A",
+      "toolFlag": "effort_imbalance",
+      "isControl": false
+    },
+    {
+      "id": "team_7-j3-s2",
+      "text": "I came into the weekend with barely anything done on my half of payments. Member A basically rescued it and I feel pretty bad about that — it's not the first time I've been the one catching up at the end.",
+      "member": "Member D",
+      "toolFlag": "member_under_contributed",
+      "isControl": false
+    },
+    {
+      "id": "team_7-j3-s3",
+      "text": "We pair-programmed most of the filtering and the CSV export and it just clicked; when one of us got stuck the other picked it up straight away and we kept the momentum.",
+      "member": "Member B",
+      "toolFlag": "mutual_support",
+      "isControl": false
+    },
+    {
+      "id": "team_7-j3-s4",
+      "text": "We finished a day early and spent the extra time cleaning up the component library so the rest of the team can reuse it.",
+      "member": "Member B",
+      "toolFlag": null,
+      "isControl": true
+    }
+  ]
+}

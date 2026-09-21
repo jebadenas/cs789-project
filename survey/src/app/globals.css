@@ -1,77 +1,110 @@
+/* Tutor questionnaire — design tokens ported from the Claude Design spec.
+   Light is the bare :root; dark is applied by setting data-color-mode="dark"
+   on <html> (the theme toggle / build default does this). */
 :root {
-  /* GitHub-like palette (Primer) */
-  --background: #f6f8fa;
-  --card: #ffffff;
-  --surface: #f6f8fa;
-  --foreground: #1f2328;
-  --text: #1f2328;
-  --muted: #59636e;
-  --muted-strong: #1f2328;
-  --line: #d1d9e0;
-  --line-muted: #d8dee4;
-  --accent: #0969da;
-  --accent-hover: #0860ca;
-  --ok: #1a7f37;
-  --danger: #cf222e;
-  --warning: #9a6700;
-  --good: #1a7f37;
-  --attention-bg: #fff8c5;
-  --danger-bg: #ffebe9;
-  --good-bg: #dafbe1;
-  --neutral-bg: #eef1f4;
-  /* aliases so pre-existing dashboard classes keep working on GitHub tokens */
-  --dashboard-bg: var(--background);
-  --dashboard-card: var(--card);
-  --dashboard-sidebar: var(--card);
-  --dashboard-line: var(--line);
-  --dashboard-muted: var(--muted);
-  --dashboard-text: var(--text);
-  --dashboard-soft: #f6f8fa;
-  --brand-neutral: var(--line);
-  --danger-soft: var(--danger-bg);
-  --good-soft: var(--good-bg);
-  --warning-soft: var(--attention-bg);
+  --bgColor-default: #ffffff;
+  --bgColor-muted: #f2f2f2;
+  --bgColor-inset: #f2f2f2;
+  --borderColor-default: #e0e0e0;
+  --borderColor-muted: #ebebeb;
+  --fgColor-default: #333333;
+  --fgColor-muted: #757575;
+  --fgColor-accent: #2d7ff9;
+  --fgColor-success: rgb(51, 138, 23);
+  --fgColor-attention: rgb(184, 117, 3);
+  --fgColor-danger: rgb(186, 30, 69);
+  --fgColor-onEmphasis: #ffffff;
+  --fgColor-disabled: #a0a0a0;
+  --bgColor-accent-emphasis: #2d7ff9;
+  --bgColor-accent-muted: rgb(207, 223, 255);
+  --bgColor-success-muted: rgb(209, 247, 196);
+  --bgColor-attention-muted: rgb(255, 234, 182);
+  --bgColor-danger-muted: rgb(255, 220, 229);
+  --bgColor-neutral-muted: #f2f2f2;
+  --bgColor-disabled: #f5f5f5;
+  --button-default-bgColor-rest: #ffffff;
+  --button-default-bgColor-hover: #f2f2f2;
+  --borderColor-accent-emphasis: #2d7ff9;
+  --shadow-resting-small: 0 0 transparent;
+  --shadow-floating-small: 0 -4px 12px -2px rgba(0, 0, 0, 0.1);
 }
 
-html {
-  min-height: 100%;
+[data-color-mode="dark"] {
+  --bgColor-default: rgb(32, 32, 32);
+  --bgColor-muted: rgb(44, 44, 44);
+  --bgColor-inset: rgb(18, 18, 18);
+  --borderColor-default: rgb(62, 62, 62);
+  --borderColor-muted: rgb(52, 52, 52);
+  --fgColor-default: rgb(226, 226, 226);
+  --fgColor-muted: rgb(160, 160, 160);
+  --fgColor-accent: rgb(110, 167, 255);
+  --fgColor-success: rgb(17, 175, 34);
+  --fgColor-attention: rgb(224, 141, 0);
+  --fgColor-danger: rgb(239, 48, 97);
+  --fgColor-onEmphasis: rgb(18, 18, 18);
+  --fgColor-disabled: rgb(110, 110, 110);
+  --bgColor-accent-emphasis: rgb(110, 167, 255);
+  --bgColor-accent-muted: rgb(28, 44, 74);
+  --bgColor-success-muted: rgb(24, 54, 16);
+  --bgColor-attention-muted: rgb(60, 42, 6);
+  --bgColor-danger-muted: rgb(70, 18, 32);
+  --bgColor-neutral-muted: rgb(44, 44, 44);
+  --bgColor-disabled: rgb(38, 38, 38);
+  --button-default-bgColor-rest: rgb(44, 44, 44);
+  --button-default-bgColor-hover: rgb(54, 54, 54);
+  --borderColor-accent-emphasis: rgb(110, 167, 255);
+  --shadow-resting-small: 0 0 transparent;
+  --shadow-floating-small: 0 -4px 14px -2px rgba(0, 0, 0, 0.6);
 }
 
 html,
 body {
-  max-width: 100vw;
-  overflow-x: clip;   /* clip (not hidden) so it doesn't break position: sticky */
+  margin: 0;
+  padding: 0;
+  background: var(--bgColor-default);
+  color: var(--fgColor-default);
 }
 
 body {
-  min-height: 100vh;
-  color: var(--foreground);
-  background: var(--background);
-  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  font-family: "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Helvetica Neue", Arial, sans-serif;
+  font-size: 13px;
+  line-height: 1.45;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
 * {
   box-sizing: border-box;
-  padding: 0;
+}
+
+:focus-visible {
+  outline: 2px solid var(--fgColor-accent);
+  outline-offset: -2px;
+  border-radius: 3px;
+}
+
+h1,
+h2,
+h3,
+p {
   margin: 0;
 }
 
-button,
-input {
-  font: inherit;
-}
-
-a:focus-visible,
-button:focus-visible,
-input:focus-visible,
-fieldset:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: -1px;
+h1,
+h2 {
+  font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, sans-serif;
+  letter-spacing: -0.005em;
 }
 
 a {
-  color: inherit;
+  color: var(--fgColor-accent);
   text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+[hidden] {
+  display: none !important;
 }

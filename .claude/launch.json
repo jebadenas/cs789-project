@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "survey",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["dev", "-p", "3001"],
+      "port": 3001,
+      "url": "http://localhost:3001"
+    },
+    {
+      "name": "dashboard",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["dev"],
+      "port": 3000,
+      "url": "http://localhost:3000"
+    }
+  ]
+}
