@@ -14,30 +14,42 @@ software project. Each semester the course runs one or two cohorts, and each
 cohort follows the same assessment cycle: four sprints, each ending in a
 peer-rating session and a reflective journal submission.
 
-This study uses four cohorts spanning three academic years
-(Table~\ref{tab:cohorts}), covering 119~teams and 433 team-sprint observations.
-A fifth cohort (Semester~1, 2023) has peer-session data but no journals, so it
-appears only in the quantitative model comparisons and not in the journal
-analysis.
+This study draws on six cohorts spanning four academic years
+(Table~\ref{tab:cohorts}), covering approximately 174~teams and over 1,000
+students. Not every cohort has both peer-session data and journals, and the
+LLM-based journal analysis (Section~\ref{sec:llm-pipeline}) was run on four of
+the six. Table~\ref{tab:cohorts} records which data sources are available for
+each cohort and which analyses each participates in.
 
 \begin{table}[ht]
   \centering
   \caption{Cohort summary. Each cohort runs independently; team labels are
-    anonymised and unique within but not across cohorts.}
+    anonymised and unique within but not across cohorts. ``LLM-coded'' indicates
+    the cohort was included in the per-sprint journal analysis
+    (Section~\ref{sec:llm-pipeline}).}
   \label{tab:cohorts}
-  \begin{tabular}{lrrr}
+  \begin{tabular}{lrrrcc}
     \toprule
-    Cohort        & Teams & Peer sessions & Journal sprints \\
+    Cohort        & Students & Teams & Peer sessions & Journals & LLM-coded \\
     \midrule
-    2023 Sem~2    &  37   &  4            &  4 \\
-    2024 Sem~1    &  15   &  4            &  4 \\
-    2024 Sem~2    &  43   &  4            &  3 \\
-    2025 Sem~1    &  24   &  4            &  4 \\
+    2022 Sem~2    &  197     & $\sim$35 & ---        & 5        & ---       \\
+    2023 Sem~1    &  110     &  20   &  3            & 4        & ---       \\
+    2023 Sem~2    &  219     &  37   &  4            & 5        & \checkmark \\
+    2024 Sem~1    &   92     &  15   &  4            & 5        & \checkmark \\
+    2024 Sem~2    &  249     &  43   &  4            & 5        & \checkmark \\
+    2025 Sem~1    &  142     &  24   &  4            & 5        & \checkmark \\
     \midrule
-    Total         & 119   &               & 433 cells \\
+    Total         & $\sim$1{,}009 & $\sim$174 &      &          &           \\
     \bottomrule
   \end{tabular}
 \end{table}
+
+The earliest cohort (2022~Semester~2) has journals but no peer-session data, so
+it cannot participate in any analysis that compares journals against peer
+scores. The 2023~Semester~1 cohort has both data sources but only three peer
+sessions rather than four. The four LLM-coded cohorts (2023~Sem~2 through
+2025~Sem~1) form the core of the blind-spot and triage analyses, covering
+119~teams and 433 team-sprint observations.
 
 \subsection{Peer-rating data}
 \label{sec:peer-data}
@@ -72,11 +84,11 @@ matrix from the same sprint. The pairing was validated against the peer session
 timestamps: the contribution-related flags in the journals (effort imbalance,
 under-contribution) agree with low peer scores 85\% of the time.
 
-Across the four cohorts, the journals contain approximately 600 individual
-submissions per cohort. The text is treated as the closest available window into
-what happened inside a team --- not as ground truth (students write for
-assessment), but as an independent signal that a human reader could use to
-decide whether a team needs attention.
+Across the six cohorts, the journals total over 4,600 individual submissions.
+The text is treated as the closest available window into what happened inside a
+team --- not as ground truth (students write for assessment), but as an
+independent signal that a human reader could use to decide whether a team needs
+attention.
 
 
 \section{Peer Assessment Models}
