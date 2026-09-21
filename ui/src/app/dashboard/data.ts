@@ -1,4 +1,4 @@
-import teamsData from "./teams.data.json";
+import cohortsData from "./cohorts.data.json";
 
 export type HealthStatus = "attention" | "watching" | "healthy";
 
@@ -11,7 +11,7 @@ export type StatusMeta = {
 
 export type Quote = {
   text: string;
-  author?: string; // blinded per-team member label, e.g. "Member C"
+  author?: string; // real member name (local coordinator tool), or blinded "Member C"
 };
 
 export type EvidenceSnippet = {
@@ -30,12 +30,25 @@ export type SprintFinding = {
   issues: string[];
   positives: string[];
   evidence: EvidenceSnippet[];
+  members?: number;
 };
 
 export type Team = {
   id: string;
   label: string;
+  members?: number;
+  project?: string; // not in the pipeline yet — shown only if present
+  tutor?: string; // not in the pipeline yet — shown only if present
   findings: SprintFinding[];
+};
+
+// One offering (e.g. "2025 S1"). Sprint count varies by cohort (3 or 4), so it's
+// carried per-cohort rather than assumed a constant across the dashboard.
+export type Cohort = {
+  id: string;
+  label: string;
+  sprints: number;
+  teams: Team[];
 };
 
 export const STATUS_META: Record<HealthStatus, StatusMeta> = {
@@ -59,93 +72,32 @@ export const STATUS_META: Record<HealthStatus, StatusMeta> = {
   },
 };
 
-export const SPRINTS = [
-  { id: "1", label: "Sprint 1" },
-  { id: "2", label: "Sprint 2" },
-  { id: "3", label: "Sprint 3" },
-  { id: "4", label: "Sprint 4" },
-];
+export const COHORTS: Cohort[] = cohortsData as Cohort[];
+export const LATEST_COHORT = COHORTS[COHORTS.length - 1];
 
-export const TEAMS: Team[] = teamsData as Team[];
+// Slim {id, label} list for the header's cohort switcher — passed to a client
+// component, so this keeps the RSC payload from shipping every cohort's full team/
+// journal-evidence data just to populate a <select>.
+export const COHORT_SUMMARIES = COHORTS.map((c) => ({ id: c.id, label: c.label }));
 
-export function getLatestSprintId() {
-  return SPRINTS[SPRINTS.length - 1].id;
+// Build the sprint list for a cohort with N sprints: [{id:"1",label:"Sprint 1"}, …].
+export function sprintsFor(n: number) {
+  return Array.from({ length: n }, (_, i) => ({ id: String(i + 1), label: `Sprint ${i + 1}` }));
 }
 
-export function getSprintLabel(sprintId: string) {
-  return SPRINTS.find((sprint) => sprint.id === sprintId)?.label ?? `Sprint ${sprintId}`;
+export function findCohort(id: string): Cohort | undefined {
+  return COHORTS.find((c) => c.id === id);
 }
 
-export function getTeam(teamId: string) {
-  return TEAMS.find((team) => team.id === teamId);
+export function isValidSprintId(cohort: Cohort, sprintId: string): boolean {
+  const n = Number(sprintId);
+  return Number.isInteger(n) && n >= 1 && n <= cohort.sprints;
 }
 
-export function getFinding(team: Team, sprintId: string) {
-  return team.findings.find((finding) => finding.sprintId === sprintId);
+export function getLatestSprintId(cohort: Cohort): string {
+  return String(cohort.sprints);
 }
 
-export function getSprintFindings(sprintId: string) {
-  return TEAMS.map((team) => {
-    const finding = getFinding(team, sprintId);
-    return finding ? { team, finding } : null;
-  }).filter((entry): entry is { team: Team; finding: SprintFinding } => entry !== null);
-}
-
-export function getCounts(sprintId: string) {
-  const counts: Record<HealthStatus, number> = {
-    attention: 0,
-    watching: 0,
-    healthy: 0,
-  };
-
-  for (const { finding } of getSprintFindings(sprintId)) {
-    counts[finding.status] += 1;
-  }
-
-  return counts;
-}
-
-export function getOrderedSprintFindings(sprintId: string) {
-  return [...getSprintFindings(sprintId)].sort((a, b) => {
-    const statusDiff = STATUS_META[a.finding.status].order - STATUS_META[b.finding.status].order;
-    if (statusDiff !== 0) {
-      return statusDiff;
-    }
-    return a.team.label.localeCompare(b.team.label);
-  });
-}
-
-export function getPreviousFinding(team: Team, sprintId: string) {
-  const sprintIndex = SPRINTS.findIndex((sprint) => sprint.id === sprintId);
-  if (sprintIndex <= 0) {
-    return undefined;
-  }
-
-  return getFinding(team, SPRINTS[sprintIndex - 1].id);
-}
-
-export function getStatusChange(team: Team, sprintId: string) {
-  const current = getFinding(team, sprintId);
-  const previous = getPreviousFinding(team, sprintId);
-
-  if (!current || !previous) {
-    return "No previous sprint";
-  }
-
-  const currentOrder = STATUS_META[current.status].order;
-  const previousOrder = STATUS_META[previous.status].order;
-
-  if (currentOrder < previousOrder) {
-    return `Worsened from ${STATUS_META[previous.status].label}`;
-  }
-  if (currentOrder > previousOrder) {
-    return `Improved from ${STATUS_META[previous.status].label}`;
-  }
-  return `Unchanged from ${STATUS_META[previous.status].label}`;
-}
-
-export function getUrgentTeams(sprintId: string) {
-  return getOrderedSprintFindings(sprintId).filter(
-    ({ finding }) => finding.status === "attention" || finding.status === "watching",
-  );
+export function findTeam(cohort: Cohort, teamId: string): Team | undefined {
+  return cohort.teams.find((t) => t.id === teamId);
 }
