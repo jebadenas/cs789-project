@@ -1,0 +1,59 @@
+% =============================================================================
+%  preamble.tex — packages, macros, formatting
+% =============================================================================
+
+% --- Core typography --------------------------------------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[british]{babel}
+\usepackage[a4paper,margin=2.8cm]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+
+% --- Maths ------------------------------------------------------------------
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{bm}
+
+% --- Colours ----------------------------------------------------------------
+\usepackage{xcolor}
+
+% --- Tables, figures, code --------------------------------------------------
+\usepackage{graphicx}
+\graphicspath{{figures/}}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{caption}
+\captionsetup{font=small,labelfont=bf}
+\usepackage{subcaption}
+\usepackage{float}
+\usepackage{listings}
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  breaklines=true,
+  frame=single,
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  showstringspaces=false,
+}
+
+% --- Cross-refs, links, citations ------------------------------------------
+\usepackage[round]{natbib}   % chapters cite with \citep/\citet
+\usepackage[hidelinks]{hyperref}
+\usepackage{cleveref}
+\usepackage{url}
+
+% --- Local macros -----------------------------------------------------------
+\newcommand{\iwf}{\mathrm{IWF}}
+\newcommand{\paf}{\mathrm{PAF}}
+\newcommand{\rmse}{\mathrm{RMSE}}
+\newcommand{\todo}[1]{{\color{red}\textbf{TODO:} #1}}
+
+% --- Theorem environments ---------------------------------------------------
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[chapter]
+
+\theoremstyle{plain}
+\newtheorem{proposition}{Proposition}[chapter]

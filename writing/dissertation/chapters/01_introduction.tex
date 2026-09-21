@@ -1,0 +1,72 @@
+\chapter{Introduction}
+\label{ch:intro}
+
+\section{Motivation}
+\label{sec:motivation}
+
+Capstone teams submit one piece of work and receive one mark, but the effort behind that mark is rarely split evenly. Giving every member the same grade rewards those who contributed little and penalises those who carried the load. A common fix is a peer-derived multiplier: each student rates how much every teammate contributed, and those ratings are combined into a per-student weight that adjusts the shared mark up or down~\citep{kaufman2000accounting, loddington2009webpa} In cohorts of
+several hundred students no instructor can observe who did what inside each
+team, so the peer ratings are not a supplement to staff judgement --- they are
+the only mechanism for individualising grades at all.
+
+The signal is fragile.
+Teammates who agree to rate each other uniformly highly neutralise the
+mechanism out entirely, and simple averaging cannot distinguish them from a genuinely
+balanced team~\citep{song2017collusion}. Different raters also calibrate differently — two students who contributed equally can end up with different multipliers simply because of who happened to rate them. Free-riding is the hardest case of all: a disengaged member and a high performer who undersells their own work can look almost identical in the numbers~\citep{hall2013freeriding}.
+
+More robust methods exist. WebPA adjusts for the fact that raters use the scale differently, rescaling each person's ratings against their own average~\citep{loddington2009webpa}. PeerRank goes further: it treats the ratings as a network and iteratively re-weights each rater's influence according to how highly rated they themselves are — borrowing the logic behind web-search ranking algorithms~\citep{walsh2014peerrank, page1999pagerank}. But these methods were designed for settings with many raters and many targets — online courses where every student grades dozens of peers~\citep{piech2013tuned}. A capstone team is the opposite: five or six people, each rating only the others, with missing or identical-looking responses common. Whether these more sophisticated methods actually improve reliability in such small groups, or simply add complexity and new ways to fail, is an open question.
+
+\section{The Instrument Under Study}
+\label{sec:iwf-vulns}
+
+This dissertation examines the peer-rating system used in COMPSCI 399, the University of Auckland's Computer Science capstone course, which follows the framework of Kaufman, Felder and Fuller~\citep{kaufman2000accounting}. Each member of a team
+of $N$ students distributes a fixed pool of $10N$ points across the team,
+themselves included. Self-scores are excluded from the calculation: a student's
+IWF is the mean of the peer scores they received,
+\begin{equation}
+  \iwf_i \;=\; \frac{1}{|P_i|}\sum_{j \in P_i} s_{ji},
+  \label{eq:iwf}
+\end{equation}
+where $s_{ji}$ is the score awarded to student $i$ by peer $j$ and $P_i$ is the
+set of peers who submitted a rating. The denominator adapts to $|P_i|$ rather
+than being fixed at $N-1$, so a student is not penalised by a teammate's failure
+to submit. The individual grade is the team grade multiplied by $\iwf_i / 10$.
+
+One design choice in this system opens the door to a whole class of problems. In the original Kaufman et al.\ scheme, each student's average rating is divided by the team's overall average, which keeps the multipliers centred around one. COMPSCI 399 instead divides by a fixed constant (10). This seems reasonable — the points budget already constrains what each rater can award — but it removes a second function the team-average divisor was serving: keeping the multipliers balanced. Because self-scores are dropped from the numerator, the points a student assigns to themselves effectively disappear from the pool. Any shift in how much of the budget ends up as self-allocated changes everyone's grade rather than cancelling out.
+
+Three failure modes follow, and they shape the design of this study.
+
+\paragraph{Collusion through uniform inflation.} A team that agrees to give each other maximum scores produces no differentiation at all — every multiplier collapses to the same neutral value. Instructors have reported this pattern directly~\citep{hooshangi2025assessment}.
+
+\paragraph{Self-sacrificial allocation.} A student who awards themselves zero has
+that self-score discarded, but the points they gave teammates are counted in
+full. Consider a team of three, each holding $30$ points. Rating honestly, each
+awards $10$ to both teammates and $10$ to themselves, giving everyone an IWF of
+$10$. If all three instead award themselves nothing and split $30$ points
+between their two teammates, every student receives $15$ twice, for an IWF of
+$15$. This method has no loser,
+so no participant has an incentive to report it, and it leaves the ordering of
+students within the team unchanged, so it is invisible to any measure of
+relative standing. Under a team-average divisor it would cancel exactly.
+
+\paragraph{Rater unreliability.} Hall and Buzwell distinguish the \emph{voluntary} free-rider, who chooses not to contribute, from the \emph{involuntary} free-rider, who is shut out by team dynamics, language barriers, or status hierarchies that form early~\citep{hall2013freeriding}. Peer ratings punish both equally, even though only one deserves it. A marginalised student may also lack the opportunity and the perspective to rate their peers accurately — yet their ratings carry the same weight as those of the team's most engaged member.
+
+\section{From Adjudication to Triage}
+\label{sec:triage}
+
+The natural question to ask of these models is which one is best. That question assumes something this dissertation finds to be false in most cases: that the underlying ratings contain a meaningful signal at all.
+
+A weighting model takes a set of ratings and produces a grade adjustment. It returns a number regardless of what it is given. If a team's raters agree on who contributed what, that number carries useful information. If they disagree, or all rated everyone the same, or half of them never submitted, the model still returns a number — and nothing in its output distinguishes the two situations. Without that distinction, comparing aggregation methods mostly means comparing how they behave on meaningless data.
+
+This dissertation therefore asks a question that comes before model choice: when can peer-assessment data be trusted, and what should be done with the rest? Framed this way, the instrument's role shifts from adjudication to \emph{triage}. Its job is not to settle who contributed what, but to sort teams into those whose ratings support a grade adjustment and those that need a human to review — and to do so reliably enough that a coordinator's limited time is better spent than it would be otherwise.
+
+\section{Research Questions}
+\label{sec:rqs}
+
+\paragraph{RQ1 --- Manipulation resistance.} How do WebPA, PeerRank and PeerHITS compare with the simple average used in COMPSCI 399 when subjected to collusion, self-sacrificial allocation, and isolated rater error — tested on both real capstone matrices and synthetic teams with known ground truth?
+
+\paragraph{RQ2 --- Readability.} Which peer-rating matrices carry a signal that can meaningfully be read, and what proportion of a real institutional corpus fails that test?
+
+\paragraph{RQ3 --- Validity.} Does a matrix's assigned readability state correspond to anything outside the procedure that assigned it? This is tested four ways: whether planted states can be recovered from synthetic data, whether model disagreement differs across states in real data, whether states replicate across independently assessed questions, and whether the accounts students give in their own reflective journals align with the assigned states.
+
+\paragraph{RQ4 --- Practical value.} Using readability as a triage tool, does a fixed amount of instructor review effort surface more teams warranting attention than the ordering an instructor could already construct from the raw scores?

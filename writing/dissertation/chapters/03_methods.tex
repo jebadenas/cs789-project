@@ -1,0 +1,166 @@
+\chapter{Methods}
+\label{ch:methods}
+
+This chapter describes the data, the models, and the two analysis pipelines ---
+one quantitative (peer scores), one qualitative (reflective journals) --- that
+together answer the four research questions.
+
+\section{Dataset}
+\label{sec:dataset}
+
+The data come from COMPSCI~399, the University of Auckland's Computer Science
+capstone course. Students work in teams of five or six on a semester-long
+software project. Each semester the course runs one or two cohorts, and each
+cohort follows the same assessment cycle: four sprints, each ending in a
+peer-rating session and a reflective journal submission.
+
+This study uses four cohorts spanning three academic years
+(Table~\ref{tab:cohorts}), covering 119~teams and 433 team-sprint observations.
+A fifth cohort (Semester~1, 2023) has peer-session data but no journals, so it
+appears only in the quantitative model comparisons and not in the journal
+analysis.
+
+\begin{table}[ht]
+  \centering
+  \caption{Cohort summary. Each cohort runs independently; team labels are
+    anonymised and unique within but not across cohorts.}
+  \label{tab:cohorts}
+  \begin{tabular}{lrrr}
+    \toprule
+    Cohort        & Teams & Peer sessions & Journal sprints \\
+    \midrule
+    2023 Sem~2    &  37   &  4            &  4 \\
+    2024 Sem~1    &  15   &  4            &  4 \\
+    2024 Sem~2    &  43   &  4            &  3 \\
+    2025 Sem~1    &  24   &  4            &  4 \\
+    \midrule
+    Total         & 119   &               & 433 cells \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Peer-rating data}
+\label{sec:peer-data}
+
+At the end of each sprint, every team member distributes a fixed pool of
+$10N$~points (where $N$ is the team size) across all members, including
+themselves. The course system records the full rating matrix per session. From
+this matrix, a student's perceived contribution (PC) is the mean of the peer
+scores they received, excluding their self-score. The Individual Weighting
+Factor described in Section~\ref{sec:iwf-vulns} is the PC divided by the
+expected equal share (10).
+
+Each cohort has three or four peer sessions, yielding a time series of rating
+matrices per team. Self-scores are retained in the raw data but excluded from
+every analysis in this dissertation, consistent with the course's own
+calculation.
+
+\subsection{Reflective journals}
+\label{sec:journal-data}
+
+After each sprint, every student submits a reflective journal through the course
+management system. The journal has a structured template: students write about
+what they did, what the team did, what went well, and what they would change.
+Some students write a paragraph; others write a page. The journals are not
+graded for content --- they are a completion requirement --- so students have
+little incentive to misrepresent, though they may choose what to emphasise.
+
+Each journal maps to a sprint: journal~1 covers the work up to sprint~1,
+journal~2 covers sprint~2, and so on. This one-to-one pairing means a team's
+journal text for a given sprint can be compared directly with its peer-rating
+matrix from the same sprint. The pairing was validated against the peer session
+timestamps: the contribution-related flags in the journals (effort imbalance,
+under-contribution) agree with low peer scores 85\% of the time.
+
+Across the four cohorts, the journals contain approximately 600 individual
+submissions per cohort. The text is treated as the closest available window into
+what happened inside a team --- not as ground truth (students write for
+assessment), but as an independent signal that a human reader could use to
+decide whether a team needs attention.
+
+
+\section{Peer Assessment Models}
+\label{sec:models}
+
+Four models are applied to each team's rating matrix. All four take the same
+input (a matrix of peer scores) and produce the same output (a per-student
+weighting factor). They differ in how they handle rater disagreement,
+scale~usage, and credibility.
+
+\subsection{Simple Average (baseline)}
+\label{sec:simple-avg}
+
+The baseline is the method already used in COMPSCI~399, described in
+Section~\ref{sec:iwf-vulns}. Each student's IWF is the mean of the peer scores
+they received, divided by the expected equal share. No adjustment is made for
+how different raters use the scale, and every rater's scores count equally
+regardless of that rater's own standing.
+
+\subsection{WebPA}
+\label{sec:webpa-method}
+
+WebPA normalises each rater's scores by dividing by that rater's own mean score
+before averaging across raters~\citep{loddington2009webpa}. A student who gives
+everyone high marks ends up giving everyone the same normalised score --- their
+ratings differentiate nobody. A student who concentrates their points on one
+teammate amplifies that differentiation.
+
+Formally, let $s_{ji}$ be the raw score that rater~$j$ gives to student~$i$,
+and let $\bar{s}_j$ be rater~$j$'s mean score across all targets. The WebPA
+factor for student~$i$ is
+\begin{equation}
+  W_i \;=\; \frac{1}{|P_i|} \sum_{j \in P_i} \frac{s_{ji}}{\bar{s}_j},
+  \label{eq:webpa}
+\end{equation}
+where $P_i$ is the set of peers who rated student~$i$. The team's mean $W$ is
+then used to rescale the factors so they sum to $N$, preserving the team's
+overall grade.
+
+\subsection{PeerRank}
+\label{sec:peerrank-method}
+
+PeerRank adds a credibility loop: a rater's influence depends on how highly
+rated they themselves are~\citep{walsh2014peerrank}. The algorithm iterates.
+In round~$t{+}1$, student~$i$'s score is updated as
+\begin{equation}
+  r_i^{(t+1)} \;=\; (1-\alpha)\,\bar{r}
+    \;+\; \alpha \sum_{j \ne i} \frac{r_j^{(t)}}{\sum_{k \ne j} r_k^{(t)}}
+    \; s_{ji},
+  \label{eq:peerrank}
+\end{equation}
+where $\bar{r}$ is the team's mean score, $\alpha \in [0,1]$ controls how much
+the prior (the mean) is trusted versus the iterative update, and
+$r_j^{(t)}/\!\sum_k r_k^{(t)}$ is the normalised credibility of rater~$j$ at
+round~$t$. Iteration continues until convergence.
+
+The intuition is simple: if a highly rated student says someone contributed a
+lot, that testimony counts more than the same claim from a poorly rated student.
+The concern, discussed in Section~\ref{sec:peerrank}, is that this logic was
+designed for large networks. In a team of five, one noisy rater is 25\% of all
+the evidence, and the credibility loop has very little data to distinguish a
+reliable rater from an unreliable one.
+
+\subsection{PeerHITS}
+\label{sec:peerhits-method}
+
+PeerHITS separates the two qualities that PeerRank conflates: how much a
+student contributed (their \emph{authority} score) and how well they rate others
+(their \emph{hub} score). The separation follows HITS~\citep{kleinberg1999hits},
+which alternates between two updates:
+\begin{align}
+  a_i^{(t+1)} &= \sum_{j \ne i} h_j^{(t)} \cdot s_{ji},
+  \label{eq:hits-auth} \\
+  h_j^{(t+1)} &= \sum_{i \ne j} a_i^{(t)} \cdot s_{ji},
+  \label{eq:hits-hub}
+\end{align}
+where $a_i$ is the authority (contribution) score for student~$i$ and $h_j$ is
+the hub (rating quality) score for rater~$j$. After each step, both vectors are
+normalised to unit length. A good rater is one whose scores align with the
+consensus about who contributed; a good contributor is one whom the good raters
+identify.
+
+The practical advantage is that a modest contributor who rates accurately retains
+their influence over the weighting. Under PeerRank, that student's low
+contribution score would dampen their ratings, losing information. To the
+author's knowledge, HITS has not previously been applied to within-team peer
+assessment.

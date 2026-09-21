@@ -1,0 +1,34 @@
+\chapter{Background and Related Work}
+\section{Peer Assessment in Capstone Courses}
+\label{sec:peer-assess}
+
+When a team submits a single piece of work, the instructor sees the product but not the process — the students are the only ones who know who did what. Kaufman, Felder and Fuller~\citep{kaufman2000accounting} formalised the standard remedy: collect peer ratings and combine them into a per-student multiplier on the team mark. In their scheme, each student's average rating is divided by the team's overall average, making the multiplier purely relative. That detail is worth noting early, because not every implementation that cites the scheme preserves it — including the one studied here (Section~\ref{sec:iwf-vulns}). Variants of this approach are widely used, most prominently through CATME~\citep{ohland2012catme}, and there is evidence that frequent, structured peer evaluation improves both rating accuracy and team behaviour~\citep{friess2020continuous}.
+
+The central problem peer assessment is meant to catch is free-riding, but the literature is clear that free-riding is not one thing. Hall and Buzwell distinguish the \emph{voluntary} free-rider — who chooses not to contribute — from the \emph{involuntary} one, who is willing to contribute but gets shut out by team dynamics~\citep{hall2013freeriding}. The distinction matters because peer ratings punish both equally while only one deserves it, and because the excluded student's situation is, by design, invisible to any instrument that reads only the ratings. Instructors report a different kind of failure from the other direction: students neutralising the system entirely by informally agreeing to rate one another highly~\citep{hooshangi2025assessment}.
+
+\section{Normalisation and Its Limits}
+\label{sec:webpa}
+
+Simply averaging the scores a student receives makes no adjustment for how different raters use the scale. Some students spread their points; others give everyone near-maximum scores. WebPA addresses this by rescaling each student's ratings against their own average, so a rater who gives everyone high marks ends up differentiating nobody~\citep{loddington2009webpa}. The resulting multiplier preserves the team's mean grade while redistributing within the team.
+
+Its limitation mirrors its strength. Normalisation corrects for differences in how raters use the \emph{scale}, but treats every rater as equally credible: a disengaged student's judgement counts as much as the team's most involved member, and colluding raters simply look like raters who agree. Correcting for \emph{who} is rating requires a different kind of model.
+
+\section{Iterative Graph-Based Models}
+\label{sec:peerrank}
+
+An alternative approach treats peer assessment as a network — students as nodes, ratings as connections — and borrows techniques from web-search ranking. PageRank~\citep{page1999pagerank} scores a web page higher when important pages link to it, iterating until the scores settle. HITS~\citep{kleinberg1999hits} separates the same idea into \emph{hubs} (good at pointing to useful content) and \emph{authorities} (the useful content being pointed to).
+
+Walsh's PeerRank~\citep{walsh2014peerrank} applies the PageRank logic to peer grading: each rater's influence depends on how highly rated they themselves are, and the process iterates until stable. This credibility loop is what simple averaging and WebPA lack. But PeerRank was evaluated on online courses with hundreds of participants rating many others — large, statistically forgiving networks. The same is true of related scaled peer-grading work~\citep{piech2013tuned, dealfaro2013crowdgrader}. None have been tested at capstone-team scale.
+
+\label{sec:peerhits-bg}
+PeerRank also merges two distinct qualities into one number: how much a student contributed, and how accurately they rated others. A modest contributor may be the team's sharpest observer, yet PeerRank dampens their ratings because their contribution score is low. The hub--authority split offers a natural fix: mapping contribution onto the authority score and rating quality onto the hub score yields a model — called PeerHITS in this dissertation — where the two are estimated together but reported separately. To the author's knowledge, HITS has not previously been applied to peer assessment within teams.
+
+A capstone team is the opposite extreme: five or six people, each rating only the others, with a single unreliable rater making up a quarter of all evidence. Whether credibility weighting helps when there is so little data to work with is untested.
+
+
+\section{Evidence from Reflective Writing}
+\label{sec:background-journals}
+
+Peer assessment has no external ground truth — no independent measure of who actually contributed what~\citep{lei2016groundtruth}. In COMPSCI 399, students submit periodic reflective journals as part of the course, and these are the closest available window into what happened inside a team. But journals are self-reports written for assessment; they cannot settle whether a student in fact contributed less.
+
+What they \emph{can} settle is whether a reader would want to look into a team — which is precisely the judgement a triage instrument needs to predict. This dissertation therefore treats the journals as a measure of \emph{reviewability} rather than of team reality. The key quantity is not how negative a student's account is, but whether team members' accounts \emph{agree with each other}: a team where everyone identifies the same person as having contributed less reads very differently from one where members disagree. To code the journals at scale, Chapter~\ref{ch:methods} describes an LLM-based pipeline that scores each team against a fixed checklist of dynamics features, with repeated runs and shuffled member labels to check consistency.

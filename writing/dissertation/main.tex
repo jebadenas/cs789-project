@@ -1,0 +1,53 @@
+% =============================================================================
+%  Honours Dissertation — COMPSCI 789
+%  Optimising Peer-Assessment Reliability in Capstone Software Projects
+%  through Algorithmic Weighting and Qualitative Red-Flagging
+%
+%  Jos Badenas (421180443)
+%  University of Auckland, 2026
+%
+% =============================================================================
+
+\documentclass[11pt,a4paper,oneside]{report}
+\input{preamble}
+
+\title{Optimising Peer-Assessment Reliability in Capstone Software Projects\\
+  through Algorithmic Weighting and Qualitative Red-Flagging}
+\author{Jos Badenas \\ \small 421180443}
+\date{\today}
+
+\begin{document}
+
+% ---- Front matter ----------------------------------------------------------
+\pagenumbering{roman}
+\maketitle
+
+\begin{abstract}
+% TODO: ~250 words. Single paragraph. Motivation -> what you did -> what you
+% found -> what it means. (will be written after finish everything else).
+\end{abstract}
+
+\tableofcontents
+\listoffigures
+\listoftables
+
+\cleardoublepage
+\pagenumbering{arabic}
+
+% ---- Chapters --------------------------------------------------------------
+\include{chapters/01_introduction}
+\include{chapters/02_background}
+\include{chapters/03_methods}
+\include{chapters/04_implementation}
+\include{chapters/05_results}
+\include{chapters/06_discussion}
+\include{chapters/07_conclusion}
+
+% ---- Back matter -----------------------------------------------------------
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\appendix
+\include{chapters/A_appendix}
+
+\end{document}
