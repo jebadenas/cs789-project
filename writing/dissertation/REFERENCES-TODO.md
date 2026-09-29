@@ -32,12 +32,15 @@ Re-run this audit as each new section lands.
 |---|---|---|---|
 | Ch1 §Instrument | COMPSCI 399's scheme (10N points, self excluded, grade × IWF/10) | Course outline / Canvas page — cite as `@misc` | **Jos**: send me the course doc |
 | Ch1 §Instrument | COMPSCI 399 "follows the framework of Kaufman et al." | Same course doc, or reword to "resembles" | **Jos** |
-| Ch3 §3.2 WebPA | "most widely adopted normalisation method" | Needs a usage/survey source, or drop "most widely" | **Jos** — or soften |
+| Ch3 §3.2 WebPA | "most widely adopted normalisation method" | Removed in the 2026-09-30 rewrite | done |
 | Ch3 §3.2 WebPA | WebPA algorithm (divide by rater total, incl. self) | WebPA scoring docs / Loughborough worked example the code cites | **Jos**: find the WebPA algorithm doc (the code docstring mentions it) |
 | Ch2/Ch3 PeerHITS | "HITS has not previously been applied to within-team peer assessment" | Novelty claim — needs a proper Google Scholar search | **Jos**: 15-min search ("HITS" + "peer assessment"/"peer evaluation"/"team"); my web search found nothing, which isn't proof |
-| Ch3 §3.3 cascade | Kendall τ-b | `kendall1938tau` + `kendall1945ties` | ready to insert |
-| Ch3 §3.3 cascade | Permutation p = (1+count)/(1+n) | `north2002empirical`, `phipson2010permutation` | ready to insert |
-| Ch3 §3.3 cascade | Within-rater ranks remove leniency/severity | Rater-effects literature — `linacre1989mfrm` / `eckes2020ratersev` already in bib | ready to insert (check wording) |
+| Ch3 §3.3 cascade | Kendall τ-b | `kendall1938tau` + `kendall1945ties` | inserted 2026-09-30 |
+| Ch3 §3.3 cascade | Permutation p = (1+count)/(1+n) | `north2002empirical`, `phipson2010permutation` | inserted 2026-09-30 |
+| Ch3 §3.3 cascade | Within-rater ranks remove leniency/severity | `linacre1989mfrm` | inserted 2026-09-30 |
+
+- Walsh (2014) checked against the paper: synthetic data only; α = β = 0.1; α and the
+  starting grades "not critical"; self-grades assumed "but this can be relaxed".
 
 ## Coming up (for sections not yet written)
 

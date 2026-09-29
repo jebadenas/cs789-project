@@ -1,292 +1,391 @@
 \chapter{Methods}
 \label{ch:methods}
 
-This chapter describes the data, the models, and the two analysis pipelines ---
-one quantitative (peer scores), one qualitative (reflective journals) --- that
-together answer the four research questions.
+This chapter describes the data, the four weighting models, and the analyses
+built on them. The first half works with the peer ratings: the models, the
+attack simulation used to test them, and the state cascade that sorts rating
+matrices by whether they carry a readable signal. The second half works with
+the students' reflective journals and the LLM pipeline used to read them.
 
 \section{Dataset}
 \label{sec:dataset}
 
 The data come from COMPSCI~399, the University of Auckland's Computer Science
 capstone course. Students work in teams of five or six on a semester-long
-software project. Each semester the course runs one or two cohorts, and each
-cohort follows the same assessment cycle: the semester is divided into
-periods, each ending in a peer-rating session and a reflective journal
-submission. Most cohorts have four such periods; one has three.
+software project. Across a semester each student completes several peer
+feedback sessions, in which they rate their teammates, and several reflective
+journals, in which they write about their own work and their team's.
 
-This study draws on six cohorts spanning four academic years
-(Table~\ref{tab:cohorts}), covering approximately 174~teams and over 1,000
-students. Not every cohort has both peer-session data and journals, and the
-LLM-based journal analysis (Section~\ref{sec:llm-pipeline}) was run on four of
-the six. Table~\ref{tab:cohorts} records which data sources are available for
-each cohort and which analyses each participates in.
+This study uses five cohorts with both data sources (Table~\ref{tab:cohorts}).
+A sixth cohort (2022~Semester~2) has journals but no peer-rating data and is not
+used in any analysis reported here.
 
 \begin{table}[ht]
   \centering
-  \caption{Cohort summary. Each cohort runs independently; team labels are
-    anonymised and unique within but not across cohorts. ``LLM-coded'' indicates
-    the cohort was included in the per-period journal analysis
-    (Section~\ref{sec:llm-pipeline}).}
+  \caption{Cohorts used in this study. \emph{Teams} and \emph{Students} count
+    the teams retained for the peer-rating analyses
+    (Section~\ref{sec:peer-data}). \emph{Journals} is the number of journals
+    each student was asked to submit. ``LLM-coded'' marks the cohorts included in
+    the journal analysis (Section~\ref{sec:llm-pipeline}).}
   \label{tab:cohorts}
-  \begin{tabular}{lrrrcc}
+  \begin{tabular}{lrrrrc}
     \toprule
-    Cohort        & Students & Teams & Peer sessions & Journals & LLM-coded \\
+    Cohort        & Teams & Students & Peer sessions & Journals & LLM-coded \\
     \midrule
-    2022 Sem~2    &  197     & $\sim$35 & ---        & 5        & ---       \\
-    2023 Sem~1    &  110     &  20   &  3            & 4        & ---       \\
-    2023 Sem~2    &  219     &  37   &  4            & 5        & \checkmark \\
-    2024 Sem~1    &   92     &  15   &  4            & 5        & \checkmark \\
-    2024 Sem~2    &  249     &  43   &  4            & 5        & \checkmark \\
-    2025 Sem~1    &  142     &  24   &  4            & 5        & \checkmark \\
+    2023 Sem~1    &  20   & 112      & 3             & 4        & ---        \\
+    2023 Sem~2    &  37   & 214      & 4             & 5        & \checkmark \\
+    2024 Sem~1    &  15   &  87      & 4             & 5        & \checkmark \\
+    2024 Sem~2    &  43   & 252      & 4             & 5        & \checkmark \\
+    2025 Sem~1    &  24   & 138      & 4             & 5        & \checkmark \\
     \midrule
-    Total         & $\sim$1{,}009 & $\sim$174 &      &          &           \\
+    Total         & 139   & 803      &               &          &            \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-The earliest cohort (2022~Semester~2) has journals but no peer-session data, so
-it cannot participate in any analysis that compares journals against peer
-scores. The 2023~Semester~1 cohort has both data sources but only three peer
-sessions rather than four. The four LLM-coded cohorts (2023~Sem~2 through
-2025~Sem~1) form the core of the blind-spot and triage analyses, covering
-119~teams and 433 team-period observations.
+Of the 139 teams, 108 have six members and 31 have five. The four LLM-coded
+cohorts contain 119 teams. The 2023~Semester~1 cohort is left out of the journal
+analysis because its journal prompts do not ask students to reflect on team
+dynamics (Section~\ref{sec:llm-pipeline}).
 
 \subsection{Peer-rating data}
 \label{sec:peer-data}
 
-At the end of each assessment period, every team member distributes a fixed pool of
-$10N$~points (where $N$ is the team size) across all members, including
-themselves. The course system records the full rating matrix per session. From
-this matrix, a student's perceived contribution (PC) is the mean of the peer
-scores they received, excluding their self-score. The Individual Weighting
-Factor described in Section~\ref{sec:iwf-vulns} is the PC divided by the
-expected equal share (10).
+Each peer feedback session contains several questions, not all of them numeric.
+Every session asks each student to estimate how much each team member has
+contributed, on a scale where 100 is an equal share. The first and final
+sessions also contain \emph{points-distribution} questions: each student
+distributes a fixed pool of $10N$~points (50 for a five-person team, 60 for a
+six-person team) across all team members, themselves included. The final
+session has three such questions, one for each of the project's deliverables:
+the source code, the group report, and the showcase poster.
 
-Each cohort has three or four peer sessions, yielding a time series of rating
-matrices per team. Self-scores are retained in the raw data but excluded from
-every analysis in this dissertation, consistent with the course's own
-calculation.
+This dissertation uses the three points-distribution questions from each
+cohort's final session. They are the only questions that ask for the same
+thing, in the same format, in every cohort, and each gives a complete
+team-by-team rating matrix. \todo{Jos: confirm whether the final-session points
+questions are the ones that set the IWF used for grading. If so, say so here ---
+it is the strongest reason for the choice.}
+
+Each question yields one $N \times N$ matrix per team, where entry $s_{ji}$ is
+the score rater~$j$ gave to student~$i$. A student who did not submit leaves an
+empty column. Teams in which half or more of the members did not submit are
+dropped, which removes two teams from the 141 in the source files. The result is
+$139 \times 3 = 417$ rating matrices. Self-scores are recorded in the matrix;
+how each model treats them is stated in Section~\ref{sec:models}.
 
 \subsection{Reflective journals}
 \label{sec:journal-data}
 
-After each assessment period, every student submits a reflective journal through the course
-management system. The journal has a structured template: students write about
-what they did, what the team did, what went well, and what they would change.
-Some students write a paragraph; others write a page. The journals are graded on their content, so students have an incentive to
-reflect honestly, though they may still choose what to emphasise.
+Students submit reflective journals through the course's learning management
+system at regular points in the semester: four times in 2023~Semester~1 and
+five times in the other cohorts. \todo{Jos: what does the journal template ask
+students to write about, and are journals graded? Describe briefly here.} Some
+students write a paragraph; others write several pages.
 
-Each journal maps to an assessment period: journal~1 covers the work up to
-period~1, journal~2 covers period~2, and so on. This one-to-one pairing means a
-team's journal text for a given period can be compared directly with its
-peer-rating matrix from the same period. The pairing was validated against the
-peer session
-timestamps: the contribution-related flags in the journals (effort imbalance,
-under-contribution) agree with low peer scores 85\% of the time.
+Across the five cohorts there are 3,483 journal submissions, 3,071 of them in
+the four LLM-coded cohorts. These counts are after removing duplicate records
+from the 2024~Semester~2 export, in which the same submission appeared under two
+different journal numbers for almost every student.
 
-Across the six cohorts, the journals total over 4,600 individual submissions.
-The text is treated as the closest available window into what happened inside a
-team --- not as ground truth (students write for assessment), but as an
-independent signal that a human reader could use to decide whether a team needs
-attention.
+The analyses in this dissertation compare a team's journals, taken together,
+with its peer ratings for the semester. None of them depends on matching a
+particular journal to a particular peer feedback session.
+
+The journals are self-reports written for assessment, so they are not treated
+as ground truth about who contributed what. They are treated as an independent
+second view of the team: evidence a human reader could use to decide whether a
+team needs attention.
 
 
 \section{Peer Assessment Models}
 \label{sec:models}
 
-Four models are applied to each team's rating matrix. All four take the same
-input (a matrix of peer scores) and produce the same output (a per-student
-weighting factor). They differ in how they handle rater disagreement,
-scale~usage, and credibility.
+Four models are applied to each rating matrix. All four take the same input
+and produce the same output: an Individual Weighting Factor (IWF) for each
+student, where 10 means an equal share. They differ in how they treat raters who
+use the scale differently, raters who are themselves rated poorly, and
+self-scores.
+
+Throughout, $N$ is the team size, $s_{ji}$ is the score rater~$j$ gave
+student~$i$, and $P_i$ is the set of teammates who submitted a rating of
+student~$i$.
 
 \subsection{Simple Average (baseline)}
 \label{sec:simple-avg}
 
-The baseline is the method already used in COMPSCI~399, described in
-Section~\ref{sec:iwf-vulns}. Each student's IWF is the mean of the peer scores
-they received, divided by the expected equal share. No adjustment is made for
-how different raters use the scale, and every rater's scores count equally
-regardless of that rater's own standing.
+The baseline is the calculation COMPSCI~399 already uses
+(Equation~\ref{eq:iwf}): a student's IWF is the mean of the scores they
+received from their peers, with their own self-score left out,
+\begin{equation}
+  \iwf_i^{\text{avg}} \;=\; \frac{1}{|P_i|} \sum_{j \in P_i} s_{ji}.
+  \label{eq:baseline}
+\end{equation}
+The result is not rescaled. Its neutral value is 10, but a team's average IWF
+can drift above or below 10, because points a student gives themselves are
+dropped rather than redistributed. This drift is what the self-sacrifice attack
+in Section~\ref{sec:attacks} exploits. When the baseline is compared directly with
+the other three models, a second version rescaled to a team mean of 10 is used;
+the ordering of students within the team is the same in both versions.
 
 \subsection{WebPA}
 \label{sec:webpa-method}
 
-WebPA normalises each rater's scores by dividing by that rater's own mean score
-before averaging across raters~\citep{loddington2009webpa}. A student who gives
-everyone high marks ends up giving everyone the same normalised score --- their
-ratings differentiate nobody. A student who concentrates their points on one
-teammate amplifies that differentiation.
+WebPA is an open-source peer-assessment tool developed at Loughborough
+University~\citep{loddington2009webpa}. Its scoring method corrects for raters
+who use the scale differently: before anything is added up, each rater's scores
+are divided by that rater's own total, so that every rater hands out fractions
+that sum to one. A rater who gives everyone high marks and a rater who gives
+everyone low marks end up contributing the same thing.
 
-Formally, let $s_{ji}$ be the raw score that rater~$j$ gives to student~$i$,
-and let $\bar{s}_j$ be rater~$j$'s mean score across all targets. The WebPA
-factor for student~$i$ is
+Formally, the fraction rater~$j$ gives student~$i$ is
 \begin{equation}
-  W_i \;=\; \frac{1}{|P_i|} \sum_{j \in P_i} \frac{s_{ji}}{\bar{s}_j},
+  f_{ji} \;=\; \frac{s_{ji}}{\sum_{k=1}^{N} s_{jk}},
+  \label{eq:webpa-fraction}
+\end{equation}
+where the sum in the denominator runs over the whole team, rater~$j$ included.
+Each student's WebPA score is the sum of the fractions they receive,
+$W_i = \sum_j f_{ji}$, again including their own self-assessment. The IWF is
+that score relative to the team average,
+\begin{equation}
+  \iwf_i^{\text{WebPA}} \;=\; 10 \cdot \frac{W_i}{\tfrac{1}{N}\sum_{k} W_k}.
   \label{eq:webpa}
 \end{equation}
-where $P_i$ is the set of peers who rated student~$i$. The team's mean $W$ is
-then used to rescale the factors so they sum to $N$, preserving the team's
-overall grade.
+\todo{Jos: find WebPA's own description of the scoring algorithm (the
+Loughborough documentation or worked example) and cite it here alongside
+Loddington et al.}
 
-WebPA is included here as a benchmark: it is the most widely adopted
-normalisation method in the peer-assessment literature. As
-Section~\ref{sec:webpa-result} shows, on a fixed-budget instrument like the one
-used in COMPSCI~399, the normalisation step is a mathematical identity --- it
-cannot change the result.
+On the COMPSCI~399 instrument, the correction has nothing to correct. Every
+rater distributes the same $10N$~points, so every rater's total in
+Equation~\ref{eq:webpa-fraction} is the same number, and dividing by it changes
+no one's relative standing. WebPA therefore reduces to an average of received
+scores, rescaled to a team mean of 10. It differs from the baseline in only two
+ways: it keeps self-scores, and it is always rescaled. WebPA is kept in the
+comparison for that reason: it is the established normalisation method, and
+showing that the normalisation step does nothing on a fixed-budget instrument is
+itself a result (Section~\ref{sec:webpa-result}).
 
 \subsection{PeerRank}
 \label{sec:peerrank-method}
 
 PeerRank adds a credibility loop: a rater's influence depends on how highly
-rated they themselves are~\citep{walsh2014peerrank}. The algorithm iterates.
-In round~$t{+}1$, student~$i$'s score is updated as
+rated they themselves are~\citep{walsh2014peerrank}. It is defined by a
+fixed-point equation in the style of PageRank~\citep{page1999pagerank} and
+solved by iteration. The implementation here adapts Walsh's method to
+points-distribution data. Let
 \begin{equation}
-  r_i^{(t+1)} \;=\; (1-\alpha)\,\bar{r}
-    \;+\; \alpha \sum_{j \ne i} \frac{r_j^{(t)}}{\sum_{k \ne j} r_k^{(t)}}
-    \; s_{ji},
+  a_{ji} \;=\; \frac{s_{ji}}{\sum_{k \ne j} s_{jk}}
+\end{equation}
+be the share of rater~$j$'s peer points that went to student~$i$, with the
+self-score excluded. Each student has a score $r_i$, updated in each round as
+\begin{equation}
+  r_i^{(t+1)} \;=\; (1-\alpha)\, r_i^{(t)}
+    \;+\; \alpha \,
+    \frac{\sum_{j \ne i} r_j^{(t)}\, a_{ji}}{\sum_{j \ne i} r_j^{(t)}}.
   \label{eq:peerrank}
 \end{equation}
-where $\bar{r}$ is the team's mean score, $\alpha \in [0,1]$ controls how much
-the prior (the mean) is trusted versus the iterative update, and
-$r_j^{(t)}/\!\sum_k r_k^{(t)}$ is the normalised credibility of rater~$j$ at
-round~$t$. Iteration continues until convergence.
+The second term is a weighted average of the shares student~$i$ received, where
+each rater's weight is their own current score. The first term keeps part of
+the student's previous score, and $\alpha$ sets how quickly scores move. The
+starting score $r_i^{(0)}$ is the plain average of the shares student~$i$
+received. Iteration stops when the total change across the team falls below
+$10^{-6}$, or after 1{,}000 rounds. The final scores are rescaled to a team
+mean of 10. Following Walsh, $\alpha = 0.1$; Walsh notes that the value affects
+how fast the iteration converges more than where it ends up.
+
+The adaptation departs from Walsh's formulation in four ways, each needed to fit
+the instrument:
+\begin{enumerate}
+  \item Walsh assumes each grade lies between 0 and 1. Here each rater's scores
+    are converted to shares of their peer budget ($a_{ji}$ above).
+  \item Walsh allows self-grades. Here self-scores are excluded, consistent with
+    the course's own calculation.
+  \item Because self-scores are excluded, the weighted average in
+    Equation~\ref{eq:peerrank} runs over student~$i$'s peers only, not the
+    whole team.
+  \item The starting scores are rescaled to sum to one. Walsh notes that the
+    starting point does not affect the result.
+\end{enumerate}
+Walsh also defines a generalised version that rewards raters for grading
+accurately. That version is not implemented here, and the improvements Walsh
+reports for it, measured on synthetic data, should not be read as applying to
+the version used in this study.
 
 The intuition is simple: if a highly rated student says someone contributed a
-lot, that testimony counts more than the same claim from a poorly rated student.
-The concern, discussed in Section~\ref{sec:peerrank}, is that this logic was
-designed for large networks. In a team of five, one noisy rater is 25\% of all
-the evidence, and the credibility loop has very little data to distinguish a
-reliable rater from an unreliable one.
+lot, that testimony counts for more than the same claim from a poorly rated
+student. The concern, discussed in Section~\ref{sec:peerrank}, is that this
+logic assumes plenty of evidence. In a team of five, each student is rated by
+four teammates, so one unreliable rater is a quarter of the evidence, and the
+credibility loop has very little data with which to tell a reliable rater from
+an unreliable one.
 
 \subsection{PeerHITS}
 \label{sec:peerhits-method}
 
-PeerHITS separates the two qualities that PeerRank conflates: how much a
-student contributed (their \emph{authority} score) and how well they rate others
-(their \emph{hub} score). The separation follows HITS~\citep{kleinberg1999hits},
-which alternates between two updates:
+PeerHITS separates the two qualities that PeerRank ties together: how much a
+student contributed (their \emph{authority} score) and how well they rate
+others (their \emph{hub} score). The separation follows the HITS
+algorithm~\citep{kleinberg1999hits}, which alternates two updates:
 \begin{align}
-  a_i^{(t+1)} &= \sum_{j \ne i} h_j^{(t)} \cdot s_{ji},
+  a_i^{(t+1)} &= \sum_{j \ne i} h_j^{(t)} \, s_{ji},
   \label{eq:hits-auth} \\
-  h_j^{(t+1)} &= \sum_{i \ne j} a_i^{(t)} \cdot s_{ji},
+  h_j^{(t+1)} &= \sum_{i \ne j} a_i^{(t)} \, s_{ji},
   \label{eq:hits-hub}
 \end{align}
-where $a_i$ is the authority (contribution) score for student~$i$ and $h_j$ is
-the hub (rating quality) score for rater~$j$. After each step, both vectors are
-normalised to unit length. A good rater is one whose scores align with the
-consensus about who contributed; a good contributor is one whom the good raters
-identify.
+where $a_i$ is student~$i$'s authority score and $h_j$ is rater~$j$'s hub
+score. Both start equal for every student, and after each round both vectors
+are rescaled to unit length. A good rater is one whose scores line up with the
+students the team rates highly; a highly rated student is one the good raters
+rate highly. Iteration stops under the same rule as PeerRank, and the final
+authority scores are rescaled to a team mean of 10 to give the IWF.
 
-The practical advantage is that a modest contributor who rates accurately retains
-their influence over the weighting. Under PeerRank, that student's low
-contribution score would dampen their ratings, losing information. To the
-author's knowledge, HITS has not previously been applied to within-team peer
-assessment.
+Two implementation choices differ from PeerRank and are deliberate. First,
+PeerHITS works on the raw scores, as HITS is defined on the raw link matrix,
+whereas PeerRank works on budget shares. Some of the difference between the two
+models' outputs therefore comes from this choice and not from the algorithms
+alone. Second, both PeerHITS scores are updated from the previous round's values
+at the same time, whereas Kleinberg derives each from the other in turn. Both
+forms are power iterations that converge to the same pair of principal
+eigenvectors~\citep{kleinberg1999hits}.
+
+The practical advantage is that a modest contributor who rates accurately keeps
+their influence over the weighting. Under PeerRank that student's low score
+would reduce the weight of their ratings, losing information. To the author's
+knowledge, HITS has not previously been applied to peer assessment within
+teams. \todo{Jos: confirm with a literature search before submission.}
+
+\subsection{Students who did not submit}
+\label{sec:non-submitters}
+
+A student who does not submit ratings leaves an empty column in the matrix. The
+Simple Average and WebPA simply have one fewer rater for everyone else. For
+PeerRank and PeerHITS, non-submitters are removed from the matrix before the
+iteration runs, and the models give them no IWF at all. Filling in scores for
+them instead would mean inventing data about exactly the students most likely
+to be under-contributing. \todo{Jos: an alternative that imputes non-submitters
+is implemented. Do we report it as a sensitivity check in the appendix? If so,
+the result needs re-running before it is quoted.}
 
 
 \section{State Cascade}
 \label{sec:cascade}
 
-The four models in Section~\ref{sec:models} all take a rating matrix and produce
-a weighting factor. But some matrices do not carry enough signal for any model
-to produce a meaningful answer --- raters who gave everyone the same score, or
-raters who disagree about the ordering, leave the algorithms with nothing to
-work with. The state cascade is a pre-processing step that sorts each matrix
-into one of four categories based on whether the ratings contain a readable
-signal and, if so, what shape that signal takes.
+The four models in Section~\ref{sec:models} always return a number, whatever
+matrix they are given. But some matrices do not carry enough signal for any
+model's answer to mean much. If every rater gave everyone the same score, or if
+raters disagree about who contributed more than whom, the models still return
+weights, and nothing in those weights shows the difference. The state cascade
+sorts each matrix into one state according to whether its ratings contain a
+readable signal and, if they do, what shape that signal takes.
 
 \subsection{Scale-free representation}
 \label{sec:rank-transform}
 
-Before testing for signal, each rater's raw scores are converted to
-within-rater normalised ranks. If a rater gave scores of 15, 8, 12 and 5 to
-four teammates, those become rank~4, rank~2, rank~3 and rank~1, then divided by
-$k{+}1$ (where $k$ is the number of teammates they rated) to place every rater
-on a comparable 0--1 scale. This transformation removes rater effects ---
-leniency, severity and range differences --- and keeps only the ordering: which
-teammate a rater placed above which.
+Before testing for signal, each rater's scores to their teammates, self-score
+excluded, are converted to ranks. If a rater gave scores of 15, 8, 12 and 5 to
+four teammates, those become ranks 4, 2, 3 and 1. Tied scores share the average
+of their ranks. The ranks are then divided by $k{+}1$, where $k$ is the number
+of teammates the rater scored, so every rater sits on a comparable 0--1 scale.
+This removes the rater effects that make raw scores hard to compare between
+raters, such as leniency, severity, and how widely a rater spreads their
+scores~\citep{linacre1989mfrm}. What is left is only the ordering: which
+teammate each rater placed above which.
 
-A rater \emph{qualifies} if they rated at least two teammates and gave at least
-two different scores. A rater who submitted but gave everyone the same number
-expresses no ordering and is excluded.
+A rater \emph{qualifies} if they scored at least two teammates and did not give
+them all the same score. A rater who gave everyone the same number expresses no
+ordering and is left out of every step below.
 
 \subsection{The three gates}
 \label{sec:gates}
 
 The cascade applies three tests in a fixed order. Each matrix enters at Gate~A
-and exits at the first gate where a condition is met, landing in exactly one
-state (Figure~\ref{fig:cascade}).
+and leaves at the first gate whose condition it meets, landing in exactly one
+state. \todo{Figure: flowchart of the three gates and the resulting states.}
 
 \paragraph{Gate~A --- Is there an ordering?}
-Count the qualifying raters. If none qualify (all scores are flat, or only one
-rater differentiated, or no pair of raters shares enough common recipients for
-comparison), the matrix is \textbf{Silent}. No statistical test can be applied
---- the data is structurally empty.
+If no rater qualifies, the matrix is \textbf{Silent (flat)}. If exactly one
+rater qualifies, it is \textbf{Silent (lone dissenter)}: there is an ordering,
+but nobody to compare it with. Agreement between two raters is only measured
+over the teammates they both scored, and only if they share at least three; with
+fewer, a rank correlation says almost nothing. If no pair of qualifying raters
+shares three such teammates, the matrix is \textbf{Silent (incomparable)}. In
+all three cases the data are too thin for any test to be applied.
 
 \paragraph{Gate~B --- Do the orderings agree?}
-For every pair of qualifying raters, compute Kendall's $\tau_b$ over the
-recipients they both rated, then take the mean. This mean $\tau_b$ measures
-how much the raters agree about who contributed more than whom. To decide
-whether the observed agreement is significant, it is compared against a
-\emph{permutation null}: each rater's scores are randomly shuffled among the
-recipients they rated, keeping the exact set of values unchanged but destroying
-any real agreement. This shuffle is repeated 1{,}000 times to build a null
-distribution, and the $p$-value is the fraction of null draws that produce
-agreement at least as strong as the observed value. If $p > 0.05$, the raters'
-orderings are no better than random --- the matrix is \textbf{Contested}.
+For every pair of qualifying raters, Kendall's $\tau_b$ is computed over the
+teammates both of them scored, and the pairs are averaged. Kendall's $\tau$
+measures how often two orderings put a pair of people the same way
+round~\citep{kendall1938tau}; the $\tau_b$ variant corrects for
+ties~\citep{kendall1945ties}, which are common here. The mean $\tau_b$ is
+compared against a permutation null (Section~\ref{sec:perm-null}). If the
+observed agreement is not significantly greater than chance ($p > 0.05$), the
+matrix is \textbf{Contested}.
 
-\paragraph{Gate~C --- Is anyone detached?}
-The raters agree on a consensus ordering, but does anyone stand clearly apart
-from the group? For each recipient, compute their mean normalised rank across
-all qualifying raters. Then measure the gap between the lowest-ranked person and
-the next-lowest, and the gap between the highest-ranked person and the
-next-highest. Each gap is tested against the same permutation null (does a gap
-this large appear by chance?). Four outcomes are possible:
-
+\paragraph{Gate~C --- Does anyone stand apart?}
+The raters agree on an ordering, but does anyone stand clearly apart from the
+rest? For each student, the \emph{consensus rank} is their mean normalised rank
+across the qualifying raters who scored them. Two gaps are measured: between
+the lowest consensus rank and the second-lowest, and between the highest and
+the second-highest. Each gap is tested against the same permutation null, at
+$\alpha = 0.05$, with no correction for testing two gaps. Four outcomes are
+possible:
 \begin{itemize}
-  \item \textbf{One at bottom} --- one person is rated clearly below the rest.
-  \item \textbf{One at top} --- one person is rated clearly above the rest.
-  \item \textbf{Both ends} --- one person at each extreme.
-  \item \textbf{No standout} --- the raters agree on the ordering but nobody is
-    clearly separated from the pack.
+  \item \textbf{One at bottom} --- only the bottom gap is significant: one
+    student is rated clearly below the rest.
+  \item \textbf{One at top} --- only the top gap is significant: one student is
+    rated clearly above the rest.
+  \item \textbf{Both ends} --- both gaps are significant.
+  \item \textbf{No standout} --- neither gap is significant: the raters agree
+    on the ordering, but nobody is clearly separated from the group.
 \end{itemize}
 
 \subsection{Why the order matters}
 \label{sec:cascade-order}
 
-Gate~B runs before Gate~C deliberately. If the raters disagree about the
-ordering (Contested), then any apparent standout is built on noisy data --- one
-rater's low score does not mean the team agrees that person under-contributed.
-By filing disagreeing matrices as Contested before testing for standouts, the
-cascade avoids reporting a false signal.
+Gate~B runs before Gate~C on purpose. If the raters do not agree on the
+ordering, an apparent standout rests on noisy data: one rater's low score does
+not mean the team agrees that person contributed less. Filing such matrices as
+Contested before looking for standouts stops the cascade from reporting a
+signal the raters do not share. The cost is that a contested team which
+\emph{also} has a clear low scorer is filed only as Contested; the cascade does
+not report it as both.
 
 \subsection{The permutation null}
 \label{sec:perm-null}
 
-The same null model underlies both Gate~B and Gate~C. For each rater, the null
-shuffles their scores among exactly the recipients they rated. This preserves
-the team size, which raters submitted, who rated whom, and each rater's exact
-distribution of scores (their leniency, their spread, their ties). It destroys
-only the \emph{agreement} between raters --- which recipient received which
-score. Every threshold in the cascade is therefore calibrated to the specific
-matrix under test, not to an external benchmark.
+Gates~B and~C use the same null model. Each rater's scores are shuffled at
+random among the teammates that rater actually scored. This keeps everything
+about the matrix fixed except which teammate received which score: the team
+size, who submitted, who rated whom, and each rater's exact set of scores,
+including their leniency, their spread and their ties. It destroys only the
+agreement between raters. Every threshold is therefore calibrated to the matrix
+being tested, not to an outside benchmark.
 
-\subsection{Cascade states as a triage tool}
+The shuffle is repeated 1{,}000 times. If $b$ of the $B = 1{,}000$ shuffled
+matrices produce a statistic at least as extreme as the observed one, the
+$p$-value is
+\begin{equation}
+  p \;=\; \frac{b + 1}{B + 1}.
+  \label{eq:perm-p}
+\end{equation}
+Adding one to the numerator and the denominator counts the observed matrix as
+one of the possible arrangements, which keeps the $p$-value from ever being
+zero~\citep{north2002empirical, phipson2010permutation}. The random seed for
+each test is derived from the matrix's identity, so every result can be
+reproduced exactly.
+
+\subsection{From matrices to teams}
 \label{sec:cascade-triage}
 
-For the purposes of triage (RQ4), the fine-grained states are grouped into four
-tiers:
+Each team has three matrices, one for each deliverable, and so three states.
+For the analyses that work at team level, these are combined into one of four
+team states:
 \begin{enumerate}
-  \item \textbf{Silent} --- no readable signal; the matrix cannot inform action.
-  \item \textbf{Contested} --- raters disagree; the data is ambiguous.
-  \item \textbf{No standout} --- raters agree but nobody stands out.
-  \item \textbf{Standout} --- raters agree and at least one person is clearly
-    separated (one at bottom, one at top, or both).
+  \item \textbf{Standout} --- at least one of the three matrices is One at
+    bottom, One at top, or Both ends;
+  \item otherwise \textbf{Contested}, if at least one is Contested;
+  \item otherwise \textbf{No standout}, if at least one is No standout;
+  \item otherwise \textbf{Silent}.
 \end{enumerate}
-An instructor reviewing peer data could start with the Standout teams (where the
-signal is clearest), then move to Contested (where ambiguity may itself be
-diagnostic), and skip Silent teams entirely. The triage question
-(Section~\ref{sec:rq4}) is whether this ordering, combined with journal
-evidence, identifies teams that need attention more efficiently than reviewing
-all teams equally.
+The rule takes the most informative signal any of the three deliverables
+produced, so a team is Silent only if all three of its matrices are Silent.
