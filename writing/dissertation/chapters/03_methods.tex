@@ -11,8 +11,9 @@ together answer the four research questions.
 The data come from COMPSCI~399, the University of Auckland's Computer Science
 capstone course. Students work in teams of five or six on a semester-long
 software project. Each semester the course runs one or two cohorts, and each
-cohort follows the same assessment cycle: four sprints, each ending in a
-peer-rating session and a reflective journal submission.
+cohort follows the same assessment cycle: the semester is divided into
+periods, each ending in a peer-rating session and a reflective journal
+submission. Most cohorts have four such periods; one has three.
 
 This study draws on six cohorts spanning four academic years
 (Table~\ref{tab:cohorts}), covering approximately 174~teams and over 1,000
@@ -25,7 +26,7 @@ each cohort and which analyses each participates in.
   \centering
   \caption{Cohort summary. Each cohort runs independently; team labels are
     anonymised and unique within but not across cohorts. ``LLM-coded'' indicates
-    the cohort was included in the per-sprint journal analysis
+    the cohort was included in the per-period journal analysis
     (Section~\ref{sec:llm-pipeline}).}
   \label{tab:cohorts}
   \begin{tabular}{lrrrcc}
@@ -49,12 +50,12 @@ it cannot participate in any analysis that compares journals against peer
 scores. The 2023~Semester~1 cohort has both data sources but only three peer
 sessions rather than four. The four LLM-coded cohorts (2023~Sem~2 through
 2025~Sem~1) form the core of the blind-spot and triage analyses, covering
-119~teams and 433 team-sprint observations.
+119~teams and 433 team-period observations.
 
 \subsection{Peer-rating data}
 \label{sec:peer-data}
 
-At the end of each sprint, every team member distributes a fixed pool of
+At the end of each assessment period, every team member distributes a fixed pool of
 $10N$~points (where $N$ is the team size) across all members, including
 themselves. The course system records the full rating matrix per session. From
 this matrix, a student's perceived contribution (PC) is the mean of the peer
@@ -70,17 +71,17 @@ calculation.
 \subsection{Reflective journals}
 \label{sec:journal-data}
 
-After each sprint, every student submits a reflective journal through the course
+After each assessment period, every student submits a reflective journal through the course
 management system. The journal has a structured template: students write about
 what they did, what the team did, what went well, and what they would change.
-Some students write a paragraph; others write a page. The journals are not
-graded for content --- they are a completion requirement --- so students have
-little incentive to misrepresent, though they may choose what to emphasise.
+Some students write a paragraph; others write a page. The journals are graded on their content, so students have an incentive to
+reflect honestly, though they may still choose what to emphasise.
 
-Each journal maps to a sprint: journal~1 covers the work up to sprint~1,
-journal~2 covers sprint~2, and so on. This one-to-one pairing means a team's
-journal text for a given sprint can be compared directly with its peer-rating
-matrix from the same sprint. The pairing was validated against the peer session
+Each journal maps to an assessment period: journal~1 covers the work up to
+period~1, journal~2 covers period~2, and so on. This one-to-one pairing means a
+team's journal text for a given period can be compared directly with its
+peer-rating matrix from the same period. The pairing was validated against the
+peer session
 timestamps: the contribution-related flags in the journals (effort imbalance,
 under-contribution) agree with low peer scores 85\% of the time.
 
@@ -127,6 +128,12 @@ factor for student~$i$ is
 where $P_i$ is the set of peers who rated student~$i$. The team's mean $W$ is
 then used to rescale the factors so they sum to $N$, preserving the team's
 overall grade.
+
+WebPA is included here as a benchmark: it is the most widely adopted
+normalisation method in the peer-assessment literature. As
+Section~\ref{sec:webpa-result} shows, on a fixed-budget instrument like the one
+used in COMPSCI~399, the normalisation step is a mathematical identity --- it
+cannot change the result.
 
 \subsection{PeerRank}
 \label{sec:peerrank-method}
@@ -176,3 +183,110 @@ their influence over the weighting. Under PeerRank, that student's low
 contribution score would dampen their ratings, losing information. To the
 author's knowledge, HITS has not previously been applied to within-team peer
 assessment.
+
+
+\section{State Cascade}
+\label{sec:cascade}
+
+The four models in Section~\ref{sec:models} all take a rating matrix and produce
+a weighting factor. But some matrices do not carry enough signal for any model
+to produce a meaningful answer --- raters who gave everyone the same score, or
+raters who disagree about the ordering, leave the algorithms with nothing to
+work with. The state cascade is a pre-processing step that sorts each matrix
+into one of four categories based on whether the ratings contain a readable
+signal and, if so, what shape that signal takes.
+
+\subsection{Scale-free representation}
+\label{sec:rank-transform}
+
+Before testing for signal, each rater's raw scores are converted to
+within-rater normalised ranks. If a rater gave scores of 15, 8, 12 and 5 to
+four teammates, those become rank~4, rank~2, rank~3 and rank~1, then divided by
+$k{+}1$ (where $k$ is the number of teammates they rated) to place every rater
+on a comparable 0--1 scale. This transformation removes rater effects ---
+leniency, severity and range differences --- and keeps only the ordering: which
+teammate a rater placed above which.
+
+A rater \emph{qualifies} if they rated at least two teammates and gave at least
+two different scores. A rater who submitted but gave everyone the same number
+expresses no ordering and is excluded.
+
+\subsection{The three gates}
+\label{sec:gates}
+
+The cascade applies three tests in a fixed order. Each matrix enters at Gate~A
+and exits at the first gate where a condition is met, landing in exactly one
+state (Figure~\ref{fig:cascade}).
+
+\paragraph{Gate~A --- Is there an ordering?}
+Count the qualifying raters. If none qualify (all scores are flat, or only one
+rater differentiated, or no pair of raters shares enough common recipients for
+comparison), the matrix is \textbf{Silent}. No statistical test can be applied
+--- the data is structurally empty.
+
+\paragraph{Gate~B --- Do the orderings agree?}
+For every pair of qualifying raters, compute Kendall's $\tau_b$ over the
+recipients they both rated, then take the mean. This mean $\tau_b$ measures
+how much the raters agree about who contributed more than whom. To decide
+whether the observed agreement is significant, it is compared against a
+\emph{permutation null}: each rater's scores are randomly shuffled among the
+recipients they rated, keeping the exact set of values unchanged but destroying
+any real agreement. This shuffle is repeated 1{,}000 times to build a null
+distribution, and the $p$-value is the fraction of null draws that produce
+agreement at least as strong as the observed value. If $p > 0.05$, the raters'
+orderings are no better than random --- the matrix is \textbf{Contested}.
+
+\paragraph{Gate~C --- Is anyone detached?}
+The raters agree on a consensus ordering, but does anyone stand clearly apart
+from the group? For each recipient, compute their mean normalised rank across
+all qualifying raters. Then measure the gap between the lowest-ranked person and
+the next-lowest, and the gap between the highest-ranked person and the
+next-highest. Each gap is tested against the same permutation null (does a gap
+this large appear by chance?). Four outcomes are possible:
+
+\begin{itemize}
+  \item \textbf{One at bottom} --- one person is rated clearly below the rest.
+  \item \textbf{One at top} --- one person is rated clearly above the rest.
+  \item \textbf{Both ends} --- one person at each extreme.
+  \item \textbf{No standout} --- the raters agree on the ordering but nobody is
+    clearly separated from the pack.
+\end{itemize}
+
+\subsection{Why the order matters}
+\label{sec:cascade-order}
+
+Gate~B runs before Gate~C deliberately. If the raters disagree about the
+ordering (Contested), then any apparent standout is built on noisy data --- one
+rater's low score does not mean the team agrees that person under-contributed.
+By filing disagreeing matrices as Contested before testing for standouts, the
+cascade avoids reporting a false signal.
+
+\subsection{The permutation null}
+\label{sec:perm-null}
+
+The same null model underlies both Gate~B and Gate~C. For each rater, the null
+shuffles their scores among exactly the recipients they rated. This preserves
+the team size, which raters submitted, who rated whom, and each rater's exact
+distribution of scores (their leniency, their spread, their ties). It destroys
+only the \emph{agreement} between raters --- which recipient received which
+score. Every threshold in the cascade is therefore calibrated to the specific
+matrix under test, not to an external benchmark.
+
+\subsection{Cascade states as a triage tool}
+\label{sec:cascade-triage}
+
+For the purposes of triage (RQ4), the fine-grained states are grouped into four
+tiers:
+\begin{enumerate}
+  \item \textbf{Silent} --- no readable signal; the matrix cannot inform action.
+  \item \textbf{Contested} --- raters disagree; the data is ambiguous.
+  \item \textbf{No standout} --- raters agree but nobody stands out.
+  \item \textbf{Standout} --- raters agree and at least one person is clearly
+    separated (one at bottom, one at top, or both).
+\end{enumerate}
+An instructor reviewing peer data could start with the Standout teams (where the
+signal is clearest), then move to Contested (where ambiguity may itself be
+diagnostic), and skip Silent teams entirely. The triage question
+(Section~\ref{sec:rq4}) is whether this ordering, combined with journal
+evidence, identifies teams that need attention more efficiently than reviewing
+all teams equally.

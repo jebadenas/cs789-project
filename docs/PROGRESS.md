@@ -44,14 +44,20 @@ carried` fired on an even frontend/backend split). Reliability ≠ validity.
 ### The headline direction: journals vs peer scores DON'T MATCH (blind spot)
 Peer assessment measures *contribution*; it is structurally blind to a team that
 contributes evenly yet is falling apart (conflict / comms / leadership). Journals see that.
-- **Preliminary evidence:** per-sprint, ~**65%** of the (team,sprint) cells the journals
-  flag for conflict/comms/leadership look **fine on peer contribution** (robust 58–72%
-  across thresholds). Mapping Session k↔Sprint k validated (85% same-construct agreement
-  when peer flags a freeloader). `scripts/blind_spot.py`, `plans/dashboard-study-design.md` §11.
-- **To push further (open thread):** characterise *where and why* journals and peer scores
-  diverge — the asymmetry (journals over-flag mild imbalance the numbers miss), which
-  dynamics diverge most, whether divergence predicts a poor team mark. This mismatch IS the
-  contribution; deepen it.
+- **Headline:** ~**65%** of journal-flagged cells are peer-invisible (79/122, stable across
+  cohorts). Per-flag: non-contribution dynamics (conflict 67%, leadership 66%, comms 64%)
+  are peer-invisible at high rates; contribution dynamics follow a gradient down to
+  `singled_out_below` (38%) which the peers reliably catch.
+- **Predictive:** a blind-spot cell at sprint *k* predicts peer decline at *k*+1 at
+  **31% vs 14% base rate** (OR=2.71, Fisher p=0.003). Strongest per-flag predictor:
+  `leadership_problem` (OR=4.18, p=0.002). Journals see trouble a sprint before the
+  peer scores do.
+- **Characterisation:** 91% of blind-spot cells also fire `mutual_support`, only 9%
+  `harmonious_balanced` — functioning-but-fraying teams, not collapsed ones.
+- **Mapping validated:** when peers flag low contribution, journals agree 85% of the time.
+- Full write-up: `docs/qualitative/blind-spot-analysis.md`. Script: `scripts/blind_spot.py`.
+- **Open threads:** case studies (read mismatch cells in detail), mixed-effects model for
+  clustering, whether divergence predicts a poor team mark (needs raw marks — Q11).
 
 ### The study (designed, not run)
 `plans/dashboard-study-design.md` + `plans/tutor-exercise-draft.md`. Fresh tutors,
