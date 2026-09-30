@@ -151,9 +151,13 @@ that score relative to the team average,
   \iwf_i^{\text{WebPA}} \;=\; 10 \cdot \frac{W_i}{\tfrac{1}{N}\sum_{k} W_k}.
   \label{eq:webpa}
 \end{equation}
-\todo{Jos: find WebPA's own description of the scoring algorithm (the
-Loughborough documentation or worked example) and cite it here alongside
-Loddington et al.}
+This follows WebPA's published scoring algorithm~\citep{webpa_workedexample}.
+When some students do not submit, WebPA multiplies every score by a
+``fudge factor'' of $N$ divided by the number of submitters. Dividing by the
+team average in Equation~\ref{eq:webpa} has exactly the same effect, because
+each submitter's fractions sum to one. WebPA also lets an instructor fix part of
+the mark regardless of the peer ratings (its ``PA weighting''); here the whole
+weighting comes from the ratings, as it does in COMPSCI~399.
 
 On the COMPSCI~399 instrument, the correction has nothing to correct. Every
 rater distributes the same $10N$~points, so every rater's total in
@@ -250,9 +254,14 @@ eigenvectors~\citep{kleinberg1999hits}.
 
 The practical advantage is that a modest contributor who rates accurately keeps
 their influence over the weighting. Under PeerRank that student's low score
-would reduce the weight of their ratings, losing information. To the author's
-knowledge, HITS has not previously been applied to peer assessment within
-teams. \todo{Jos: confirm with a literature search before submission.}
+would reduce the weight of their ratings, losing information.
+
+HITS has been used outside web search to judge both the things being rated and
+the people rating them: for example, to analyse information-retrieval evaluation
+results~\citep{mizzaro2007hits} and to study readers' ratings of scholarly papers
+as an alternative to peer review~\citep{soprano2019hits}. To the author's
+knowledge, it has not previously been applied to contribution ratings within a
+student team, where each member is both a rater and one of the people rated.
 
 \subsection{Students who did not submit}
 \label{sec:non-submitters}
