@@ -1,17 +1,17 @@
 %%
-%% This is file `sigconf.tex',
+%% This is file `sigconf-tagged.tex',
 %% generated with the docstrip utility.
 %%
 %% The original source files were:
 %%
-%% samples.dtx  (with options: `all,proceedings,sigconf')
+%% samples.dtx  (with options: `all,proceedings,sigconf,tagged')
 %% 
 %% IMPORTANT NOTICE:
 %% 
 %% For the copyright see the source file.
 %% 
 %% Any modified versions of this file must be renamed
-%% with new filenames distinct from sigconf.tex.
+%% with new filenames distinct from sigconf-tagged.tex.
 %% 
 %% For distribution of the original source see the terms
 %% for copying and modification in the file samples.dtx.
@@ -33,6 +33,19 @@
 %TC:envir math 0 word
 %TC:envir comment 0 0
 %%
+%% The tagged file should start with the metadata commands.
+%% We also need currently use lualatex-dev for compilation!
+\ifx\HCode\Undef
+\DocumentMetadata{
+ pdfversion=2.0,pdfstandard=ua-2,
+ testphase=latest,
+ tagging=on,
+ tagging-setup={math/setup=mathml-SE},
+ lang = en
+ }
+\else
+\DocumentMetadata{}
+\fi
 %% The first command in your LaTeX source must be the \documentclass
 %% command.
 %%
@@ -249,10 +262,10 @@
 %% information and the body of the document, and typically spans the
 %% page.
 \begin{teaserfigure}
- \includegraphics[width=\textwidth]{sampleteaser}
+ \includegraphics[width=\textwidth,
+ alt={Enjoying the baseball game from the third-base
+  seats. Ichiro Suzuki preparing to bat.}]{sampleteaser}
   \caption{Seattle Mariners at Spring Training, 2010.}
-  \Description{Enjoying the baseball game from the third-base
-  seats. Ichiro Suzuki preparing to bat.}
   \label{fig:teaser}
 \end{teaserfigure}
 
@@ -615,11 +628,12 @@ third-party material, you must clearly identify it as such, as shown
 in the example below.
 \begin{figure}[h]
   \centering
- \includegraphics[width=\linewidth]{sample-franklin}
+ \includegraphics[width=\linewidth,
+ alt={A woman and a girl in white dresses sit in
+ an open car.}]{sample-franklin}
   \caption{1907 Franklin Model D roadster. Photograph by Harris \&
     Ewing, Inc. [Public domain], via Wikimedia
     Commons. (\url{https://goo.gl/VLCRBB}).}
-  \Description{A woman and a girl in white dresses sit in an open car.}
 \end{figure}
 
 Your figures should contain a caption which describes the figure to
@@ -655,9 +669,9 @@ figure in your article, place the command immediately before the
 \verb|\maketitle| command:
 \begin{verbatim}
   \begin{teaserfigure}
- \includegraphics[width=\textwidth]{sampleteaser}
+ \includegraphics[width=\textwidth,
+ alt={figure description}]{sampleteaser}
     \caption{figure caption}
-    \Description{figure description}
   \end{teaserfigure}
 \end{verbatim}
 
@@ -849,4 +863,4 @@ massa et mattis lacinia.
 \end{document}
 \endinput
 %%
-%% End of file `sigconf.tex'.
+%% End of file `sigconf-tagged.tex'.

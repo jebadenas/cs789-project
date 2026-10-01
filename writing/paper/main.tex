@@ -1,0 +1,65 @@
+% =============================================================================
+%  ACE 2027 paper: 29th Australasian Computing Education Conference
+%  Canberra, 1-5 February 2027. Submission deadline 2 November 2026 (AoE).
+%
+%  Venue rules, anonymisation checklist and build notes: README.md
+%  Paper structure: not decided yet; sections/ is empty on purpose.
+% =============================================================================
+
+% SUBMISSION (double-blind): `anonymous` hides authors, `review` adds line
+% numbers for reviewers. CAMERA-READY: \documentclass[sigconf]{acmart}
+\documentclass[sigconf,review,anonymous]{acmart}
+
+% ---- Rights and conference metadata -----------------------------------------
+% Placeholders. ACM supplies the real values through the rights form after
+% acceptance; do not invent them.
+\setcopyright{acmlicensed}
+\copyrightyear{2027}
+\acmYear{2027}
+\acmDOI{XXXXXXX.XXXXXXX}
+\acmConference[ACE '27]{Australasian Computing Education Conference}
+  {February 1--5, 2027}{Canberra, ACT, Australia}
+\acmISBN{978-X-XXXX-XXXX-X/2027/02}
+
+\input{macros}
+
+\begin{document}
+
+% ---- Title and authors ------------------------------------------------------
+% Plain text only: macros here break the PDF metadata.
+\title{Working Title}
+
+% Hidden by `anonymous` in the submission build. Co-authors and author order
+% to be confirmed.
+\author{Jos Badenas}
+\affiliation{%
+  \institution{University of Auckland}
+  \city{Auckland}
+  \country{New Zealand}}
+% \email{...}  (macros are not allowed here)
+
+% ---- Abstract ---------------------------------------------------------------
+% Must come before \maketitle (acmart errors otherwise).
+\begin{abstract}
+\todo{Abstract}
+\end{abstract}
+
+% ---- CCS concepts and keywords ----------------------------------------------
+% Required by ACM for papers over two pages. Generate the CCSXML block at
+% https://dl.acm.org/ccs and paste it here, followed by the \ccsdesc lines.
+% \begin{CCSXML} ... \end{CCSXML}
+% \ccsdesc[500]{...}
+% \keywords{...}
+
+\maketitle
+
+% ---- Body -------------------------------------------------------------------
+% Add one \input{sections/...} per section once the structure is agreed.
+
+% ---- References -------------------------------------------------------------
+% Uncomment once the first \cite is in (BibTeX errors on an empty citation
+% list). 10-page limit INCLUDES references.
+% \bibliographystyle{ACM-Reference-Format}
+% \bibliography{references}
+
+\end{document}

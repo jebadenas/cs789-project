@@ -42,3 +42,6 @@ prototypes/
 # R session cruft
 .Rhistory
 .Rproj.user/
+
+# LaTeX build output (writing/*/build via .latexmkrc)
+writing/**/build/
