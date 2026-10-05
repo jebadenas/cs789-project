@@ -2,23 +2,35 @@
 \label{sec:intro}
 % Budget: ~0.75 page.
 
-\begin{outline}
-  \item \textbf{Problem.} In team capstones, staff need to know how teams are working, but
-    the usual instrument (peer ratings of contribution) only measures contribution, is
-    collected at set points, and students can game or soften it
-    (cite kaufman2000accounting, ohland2012catme, hooshangi2025assessment).
-  \item \textbf{The untapped source.} Students already write regular reflective journals,
-    including a prompted section on team dynamics. These hold a running account of how
-    each team is going, but the volume is beyond what staff can read closely: one round in
-    our course was 222 journals, median about 1,500 words, about 370,000 words in total
-    (\S\ref{sec:context}).
-  \item \textbf{What we built.} A tool that reads one round of a team's journals with an
-    open-weight LLM run on university hardware, and flags three kinds of team trouble
-    (conflict, unequal contribution, coordination problems), each backed by verbatim quotes.
-  \item \textbf{What this paper reports.} The course context, the tool's design and how it
-    evolved, its use on one live round of journals that six tutors reviewed, and a
-    reflection on what worked and what did not.
-  \item \textbf{Contributions} (short list): (1) a reusable design for LLM journal flagging
-    under privacy constraints; (2) evidence on its consistency and on how tutors judged its
-    flags; (3) lessons for staff considering something similar.
-\end{outline}
+When students build software in teams, staff mark what the team delivers and need some
+other way to see how the team worked. The usual answer is peer assessment: students rate
+each other's contribution, and the ratings adjust individual
+marks~\cite{kaufman2000accounting,ohland2012catme}. Peer ratings answer one question, how
+much each member contributed, and only at the points in the semester when they are
+collected. They also depend on students rating each other candidly. Instructors report
+students informally agreeing to rate one another
+well~\cite{hooshangi2025assessment}, and a student who was shut out of the work by
+teammates receives the same low ratings as one who chose not to take
+part~\cite{hall2013freeriding}.
+
+Many capstones also ask students to keep reflective journals. In our course every student
+writes one roughly every two weeks, and the template has a section on the relationships
+within their team. Students use it to describe arguments, uneven workloads and breakdowns
+in communication. The difficulty is volume. One round of journals in the semester we report
+on came to 222 submissions and about 370,000 words, or roughly 60,000 words for each of
+the six tutors. Tutors read their own teams' journals to mark them, but a course
+coordinator responsible for all 43 teams has no practical way to read them all.
+
+We built a tool that reads one round of a team's journals and flags three kinds of
+trouble: interpersonal conflict, unequal contribution, and coordination problems. It runs
+an open-weight large language model (LLM) on university hardware, so the journals never
+leave the institution, and it raises a flag only when it can back the flag with the
+students' own words, quoted verbatim. We developed the tool on four earlier offerings of
+the course and then ran it on one round of journals from a live semester. Each of the six
+tutors reviewed its flags for their own teams. No action was taken on the tool's output
+during that semester.
+
+Section~\ref{sec:context} describes the course. Section~\ref{sec:tool} describes the tool
+and how its design changed during development, and Section~\ref{sec:practice} reports its
+development and its use on the live round. Section~\ref{sec:reflection} sets out what we
+would tell another course considering the same approach.
