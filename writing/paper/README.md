@@ -29,7 +29,8 @@ COMPSCI-789 workspace.
 
 ## Open decisions (Jos to make; nothing below is assumed in the files)
 
-- [ ] Track: research or practitioner paper
+- [x] Track: **practitioner paper** (Jos, 2026-10-05). It should describe the tool, the
+      context it was used in, and reflect on how it worked in practice
 - [ ] Title
 - [ ] Co-authors and author order
 - [ ] Section structure (then add `sections/*.tex` and `\input` them in `main.tex`)
