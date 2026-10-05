@@ -1,0 +1,42 @@
+\section{The Tool}
+\label{sec:tool}
+% Budget: ~2 pages. Figure: pipeline. Table: the three flags.
+
+\subsection{Design constraints}
+\begin{outline}
+  \item Privacy: journals stay on university hardware; open-weight model, no external API.
+  \item Scale: one round for a whole cohort in a single batch job.
+  \item Evidence first: every flag must point to the student's own words.
+  \item Staff time: the output is something a tutor can check in minutes.
+\end{outline}
+
+\subsection{Pipeline}
+\begin{outline}
+  \item Collect one round of a team's journals; strip the timesheet; label members with
+    shuffled letters (A, B, \ldots) so names never reach the model.
+  \item Qwen2.5-72B-Instruct (AWQ) served with vLLM on a university GPU cluster.
+    \todo{cite Qwen2.5 report and vLLM}
+  \item Three independent runs per team and round, with member letters reshuffled each
+    run; temperature 0.2; JSON output.
+  \item Evidence rule: a flag counts only if the model returns 1--3 word-for-word quotes
+    that directly support it, each tagged with the member it came from; otherwise it is
+    treated as absent.
+  \item Figure: pipeline from journals to flagged snippets.
+\end{outline}
+
+\subsection{Three flags, not eleven}
+\begin{outline}
+  \item Development started with eleven team-dynamics flags on past cohorts.
+  \item Co-firing analysis over 493 team-rounds: the six contribution flags fired together
+    84--99\% of the time; the two coordination flags were related but asymmetric; conflict
+    stood apart; the two positive flags fired almost everywhere and told staff nothing.
+  \item Collapsed to: conflict, unequal contribution, coordination problems. Table with
+    each flag's definition and its ``not this'' boundary (e.g.\ a heated technical
+    disagreement is not conflict).
+\end{outline}
+
+\subsection{What tutors see}
+\begin{outline}
+  \item The reading interface: a team's journals with flagged passages shown in context.
+    Screenshot. \todo{confirm which view goes in: questionnaire or dashboard}
+\end{outline}

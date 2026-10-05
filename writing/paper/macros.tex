@@ -8,3 +8,9 @@
 
 % Same notation as the dissertation.
 \newcommand{\iwf}{\mathrm{IWF}}
+
+% Planning notes shown in grey in the PDF, so a reviewer can read the outline.
+% Replace each outline with prose; scripts/check-submission.sh fails while any remain.
+\newenvironment{outline}
+  {\begingroup\color{gray}\small\itemize}
+  {\enditemize\endgroup}

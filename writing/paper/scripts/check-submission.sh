@@ -30,6 +30,10 @@ else bad "$pages pages (limit 5-10, references included)"; fi
 n=$(grep -n '\\todo{' $SOURCES | grep -v '^macros.tex' | wc -l | tr -d ' ')
 [ "$n" -eq 0 ] && good "no \\todo left" || { bad "$n \\todo left:"; grep -n '\\todo{' $SOURCES | grep -v '^macros.tex'; }
 
+# 3b. Outline blocks left
+n=$(grep -n 'begin{outline}' $SOURCES | grep -v '^macros.tex' | wc -l | tr -d ' ')
+[ "$n" -eq 0 ] && good "no outline blocks left" || bad "$n outline block(s) left"
+
 # 4. Identifying text in the rendered PDF (the author block is hidden by
 #    `anonymous`, so the source itself is allowed to contain it)
 hits=$(pdftotext "$PDF" - | grep -n -i -E "$IDENT")

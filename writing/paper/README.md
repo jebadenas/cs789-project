@@ -32,10 +32,10 @@ COMPSCI-789 workspace.
 - [x] Track: **practitioner paper** (Jos, 2026-10-05). It should describe the tool, the
       context it was used in, and reflect on how it worked in practice
 - [ ] Title
-- [ ] Co-authors and author order
-- [ ] Section structure (then add `sections/*.tex` and `\input` them in `main.tex`)
-- [ ] What results go in, given the tutor validation study has not run yet and
-      the deadline is 2 Nov
+- [x] Authors: Jos Badenas, Anna Trofimova (Jos, 2026-10-05)
+- [ ] Section structure: first proposal in `sections/` (2026-10-05), waiting on Jos + Anna
+- [x] Evidence: development consistency + the tutor study on one live round (2026 S2,
+      journal 3). No comparison with peer scores (Jos, 2026-10-05)
 - [ ] CCS concepts and keywords (generate at https://dl.acm.org/ccs)
 
 ## Layout

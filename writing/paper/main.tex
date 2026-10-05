@@ -27,16 +27,24 @@
 
 % ---- Title and authors ------------------------------------------------------
 % Plain text only: macros here break the PDF metadata.
+% Options under discussion (Jos to pick):
+%  1. Flagging Team Trouble in Capstone Reflective Journals with an Open-Weight LLM
+%  2. Reading Between the Sprints: An LLM Tool that Surfaces Team Problems from Student Journals
 \title{Working Title}
 
-% Hidden by `anonymous` in the submission build. Co-authors and author order
-% to be confirmed.
+% Hidden by `anonymous` in the submission build.
 \author{Jos Badenas}
 \affiliation{%
   \institution{University of Auckland}
   \city{Auckland}
   \country{New Zealand}}
 % \email{...}  (macros are not allowed here)
+
+\author{Anna Trofimova}
+\affiliation{%
+  \institution{University of Auckland}
+  \city{Auckland}
+  \country{New Zealand}}
 
 % ---- Abstract ---------------------------------------------------------------
 % Must come before \maketitle (acmart errors otherwise).
@@ -54,7 +62,15 @@
 \maketitle
 
 % ---- Body -------------------------------------------------------------------
-% Add one \input{sections/...} per section once the structure is agreed.
+% Page budget (10 incl. references): 0.75 + 0.75 + 0.75 + 2 + 2 + 1.25 + 0.5
+% + ~1 references = ~9, leaving ~1 page of slack.
+\input{sections/01_introduction}
+\input{sections/02_background}
+\input{sections/03_context}
+\input{sections/04_tool}
+\input{sections/05_practice}
+\input{sections/06_reflection}
+\input{sections/07_conclusion}
 
 % ---- References -------------------------------------------------------------
 % Uncomment once the first \cite is in (BibTeX errors on an empty citation
