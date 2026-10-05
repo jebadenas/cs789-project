@@ -39,6 +39,23 @@ COMPSCI-789 workspace.
       journal 3). No comparison with peer scores (Jos, 2026-10-05)
 - [ ] CCS concepts and keywords (generate at https://dl.acm.org/ccs)
 
+## Structure check against published ACE practitioner papers (2026-10-05)
+
+Two recent papers that call themselves practitioner papers:
+- Qiao, Denny, Giacaman, *Oversight in Action* (ACE '25, 10 pp, an LLM tool deployed in
+  a course; the closest model for ours): Introduction · Related work · Tool design (theory,
+  technical workflow, instructor workflow) · Evaluation (participants, data) · Results and
+  discussion (usage, edits, example questions, instructor feedback) · Contributions and
+  discussion + future work · Conclusions.
+- Swift, *LLMs Unplugged* (ACE '26, 8 pp, a teaching resource): Introduction · design
+  rationale · the resource · "Reception: notes from the field" · Next steps. No related-work
+  section; says outright it is "a practitioner paper rather than a controlled study".
+
+Our outline follows the first. Changes made from the comparison: §4 opens with a design
+rationale, §5 gains a worked-examples subsection. Related work to read: Nilson et al. (ACE
+'26, Anna's group: LLMs checking self-reports against Git), arXiv 2608.24634 (team
+dysfunctions and performance in capstones).
+
 ## Layout
 
 ```

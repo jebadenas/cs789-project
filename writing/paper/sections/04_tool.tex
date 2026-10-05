@@ -2,12 +2,14 @@
 \label{sec:tool}
 % Budget: ~2 pages. Figure: pipeline. Table: the three flags.
 
-\subsection{Design constraints}
+\subsection{Design rationale}
 \begin{outline}
   \item Privacy: journals stay on university hardware; open-weight model, no external API.
   \item Scale: one round for a whole cohort in a single batch job.
   \item Evidence first: every flag must point to the student's own words.
   \item Staff time: the output is something a tutor can check in minutes.
+  \item Staff stay in the loop: the tool points tutors at passages; it decides nothing
+    (precedent: qiao2025oversight).
 \end{outline}
 
 \subsection{Pipeline}
