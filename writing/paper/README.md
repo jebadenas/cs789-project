@@ -52,9 +52,9 @@ Two recent papers that call themselves practitioner papers:
   section; says outright it is "a practitioner paper rather than a controlled study".
 
 Our outline follows the first. Changes made from the comparison: §4 opens with a design
-rationale, §5 gains a worked-examples subsection. Related work to read: Nilson et al. (ACE
-'26, Anna's group: LLMs checking self-reports against Git), arXiv 2608.24634 (team
-dysfunctions and performance in capstones).
+rationale, §5 gains a worked-examples subsection. Related work to read: arXiv 2608.24634
+(team dysfunctions and performance in capstones). Not citing Nilson et al. (ACE '26)
+(Jos, 2026-10-05: not related).
 
 ## Layout
 
