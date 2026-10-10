@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Disagreement Coding</title>
+<style>
+  :root {
+    --bg: #f7f7f5; --panel: #ffffff; --fg: #1d1d1b; --muted: #6b6b66; --line: #deddd8;
+    --accent: #2f5d8a; --accent-bg: #e6eef6; --mark: #fff0b3; --ok: #2e7d4f; --warn: #a3471f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #161615; --panel: #1f1f1d; --fg: #ecebe6; --muted: #a09f98; --line: #34342f;
+      --accent: #8ab4dd; --accent-bg: #23303c; --mark: #5a4b12; --ok: #6cc28f; --warn: #e39a74; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  header { position: sticky; top: 0; z-index: 2; background: var(--panel); border-bottom: 1px solid var(--line);
+    padding: 10px 16px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  header h1 { font-size: 15px; margin: 0 8px 0 0; }
+  .muted { color: var(--muted); }
+  button { font: inherit; border: 1px solid var(--line); background: var(--panel); color: var(--fg);
+    border-radius: 6px; padding: 5px 11px; cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--panel); }
+  button:disabled { opacity: .45; cursor: default; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 16px; display: grid; gap: 16px;
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); }
+  @media (max-width: 860px) { .wrap { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+  .flag { display: inline-block; background: var(--accent-bg); color: var(--accent); border-radius: 999px;
+    padding: 3px 10px; font-weight: 600; font-size: 13px; }
+  .journal { white-space: pre-wrap; max-height: 62vh; overflow: auto; border-top: 1px solid var(--line);
+    margin-top: 12px; padding-top: 12px; font-size: 14px; }
+  mark { background: var(--mark); color: inherit; padding: 1px 0; border-radius: 2px; }
+  .opt { display: block; border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px;
+    margin: 0 0 8px; cursor: pointer; }
+  .opt:hover { border-color: var(--accent); }
+  .opt.sel { border-color: var(--accent); background: var(--accent-bg); }
+  .opt input { margin-right: 8px; }
+  .opt .def { font-size: 13px; color: var(--muted); margin: 2px 0 0 24px; }
+  .opt .ex { font-size: 12px; color: var(--muted); font-style: italic; margin: 2px 0 0 24px; }
+  .key { font-size: 11px; border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; margin-left: 6px; color: var(--muted); }
+  textarea { width: 100%; min-height: 64px; font: inherit; border: 1px solid var(--line); border-radius: 8px;
+    padding: 8px; background: var(--panel); color: var(--fg); }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 16px 0 8px; }
+  h2:first-child { margin-top: 0; }
+  .dots { display: flex; flex-wrap: wrap; gap: 4px; }
+  .dot { width: 22px; height: 22px; border-radius: 5px; border: 1px solid var(--line); font-size: 11px;
+    display: grid; place-items: center; cursor: pointer; background: var(--panel); }
+  .dot.done { background: var(--accent-bg); border-color: var(--accent); }
+  .dot.cur { outline: 2px solid var(--accent); }
+  .status { font-size: 12px; }
+  .status.ok { color: var(--ok); } .status.err { color: var(--warn); }
+  .guide { max-width: 1180px; margin: 16px auto 0; padding: 0 16px; }
+  .guide details { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; }
+  .guide summary { cursor: pointer; font-weight: 600; }
+  .guide ol { padding-left: 20px; } .guide li { margin-bottom: 6px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { border-bottom: 1px solid var(--line); padding: 6px 8px; text-align: left; }
+  .banner { background: var(--accent-bg); border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; font-size: 14px; }
+  .nav { display: flex; gap: 8px; margin-top: 14px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Why did the tutor say "no problem"?</h1>
+  <span id="progress" class="muted"></span>
+  <span style="flex:1"></span>
+  <button id="modeBtn"></button>
+  <span id="status" class="status muted"></span>
+</header>
+
+<div class="guide">
+  <details id="guide">
+    <summary>How to code (read this first)</summary>
+    <ol>
+      <li><b>Read the whole highlighted passage, then the text around it.</b> You are judging what the
+        tutor saw: the passage in its context.</li>
+      <li><b>Ask one question:</b> why would a sensible reader say this shows <i>no current problem</i>?
+        Pick the one code that answers it best. If two fit, take the one higher in the list.</li>
+      <li><b>Code what is written, not what you know about the team.</b> Don't use anything outside the page.</li>
+      <li><b>Then say who you side with.</b> "Tutor" if you also see no problem, "Tool" if the flag was fair
+        and the tutor was strict, "Unsure" otherwise. This is separate from the code.</li>
+      <li><b>Write a note</b> whenever you hesitate or choose "Other". One line is enough. Notes are
+        where new codes come from.</li>
+      <li><b>Don't change the codes halfway through.</b> If a new reason keeps coming up, note it and keep
+        going; we decide afterwards whether it becomes a code.</li>
+      <li><b>When all are coded, take a break, then do the re-check.</b> The app shows 10 snippets again
+        without your earlier answer. Comparing the two tells us how stable your coding is.</li>
+    </ol>
+    <p class="muted">Keys: 1–6 pick a code · T / O / U pick a side · ← → move · the passage is highlighted.</p>
+  </details>
+</div>
+
+<div class="wrap" id="main"></div>
+
+<script>
+const FLAG_LABEL = {
+  conflict: "Interpersonal conflict or tension",
+  unequal_contribution: "Unequal contribution",
+  coordination: "Coordination or communication breakdown",
+};
+const RECHECK_N = 10;
+let book, items, state = { codes: {}, recheck: {} }, idx = 0, mode = "code";
+
+const $ = (s) => document.querySelector(s);
+const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function seededSample(arr, n, seed) {
+  const a = arr.slice(); let x = seed;
+  for (let i = a.length - 1; i > 0; i--) { x = (x * 1103515245 + 12345) % 2147483648; const j = x % (i + 1); [a[i], a[j]] = [a[j], a[i]]; }
+  return a.slice(0, n);
+}
+const recheckIds = () => seededSample(items.map((i) => i.id), Math.min(RECHECK_N, items.length), 42);
+const list = () => mode === "code" ? items : items.filter((i) => recheckIds().includes(i.id));
+const bucket = () => state[mode === "code" ? "codes" : "recheck"];
+const isDone = (id, b = bucket()) => b[id] && b[id].code && (b[id].code !== "other" || (b[id].note || "").trim());
+
+let saveTimer;
+function save() {
+  clearTimeout(saveTimer);
+  $("#status").textContent = "Saving…"; $("#status").className = "status muted";
+  saveTimer = setTimeout(async () => {
+    try {
+      const r = await fetch("/api/codes", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ codebookVersion: book.version, codes: state.codes, recheck: state.recheck }) });
+      if (!r.ok) throw new Error(r.status);
+      $("#status").textContent = "Saved"; $("#status").className = "status ok";
+    } catch (e) { $("#status").textContent = "Not saved: is the server running?"; $("#status").className = "status err"; }
+  }, 250);
+}
+
+function set(field, value) {
+  const it = list()[idx]; const b = bucket();
+  b[it.id] = { ...(b[it.id] || {}), [field]: value, at: new Date().toISOString() };
+  save(); render();
+}
+
+function render() {
+  const L = list(); const it = L[idx];
+  const doneN = L.filter((i) => isDone(i.id)).length;
+  const allCoded = items.every((i) => isDone(i.id, state.codes));
+  $("#progress").textContent = `${mode === "code" ? "Coding" : "Re-check"} · ${doneN} of ${L.length} done`;
+  $("#modeBtn").textContent = mode === "code" ? "Start re-check (10)" : "Back to coding";
+  $("#modeBtn").disabled = mode === "code" && !allCoded;
+  $("#modeBtn").title = mode === "code" && !allCoded ? "Finish all snippets first" : "";
+
+  if (mode === "code" && allCoded && idx === -1) return renderSummary();
+
+  const a = bucket()[it.id] || {};
+  const ctx = it.context;
+  const opts = book.codes.map((c, k) => `
+    <label class="opt ${a.code === c.value ? "sel" : ""}">
+      <input type="radio" name="code" value="${c.value}" ${a.code === c.value ? "checked" : ""}>
+      <b>${esc(c.label)}</b><span class="key">${k + 1}</span>
+      <div class="def">${esc(c.definition)}</div>
+      ${c.example ? `<div class="ex">e.g. "${esc(c.example)}"</div>` : ""}
+    </label>`).join("");
+  const sides = book.side.map((s) => `
+    <label class="opt ${a.side === s.value ? "sel" : ""}" style="display:inline-block;margin-right:6px">
+      <input type="radio" name="side" value="${s.value}" ${a.side === s.value ? "checked" : ""}>${esc(s.label)}
+      <span class="key">${{ tutor: "T", tool: "O", unsure: "U" }[s.value]}</span></label>`).join("");
+  const dots = L.map((x, k) => `<div class="dot ${isDone(x.id) ? "done" : ""} ${k === idx ? "cur" : ""}" data-k="${k}">${x.n}</div>`).join("");
+
+  $("#main").innerHTML = `
+    <div class="card">
+      ${mode === "recheck" ? `<div class="banner">Re-check: code this again from scratch. Your first answer is hidden on purpose.</div>` : ""}
+      <div class="muted" style="font-size:13px">Snippet ${it.n} of ${items.length}</div>
+      <div style="margin:6px 0">Tool flagged: <span class="flag">${esc(FLAG_LABEL[it.toolFlag] || it.toolFlag)}</span></div>
+      <div class="muted" style="font-size:13px">Tutor answered: <b>None — doesn't indicate any of these</b></div>
+      ${ctx.found ? "" : `<div class="banner">Couldn't locate this passage in the journal text, so only the passage is shown.</div>`}
+      <div class="journal" id="journal">${esc(ctx.before)}<mark id="hit">${esc(ctx.match)}</mark>${esc(ctx.after)}</div>
+    </div>
+    <div class="card">
+      <h2>Why "no problem"? (pick one)</h2>${opts}
+      <h2>Who do you side with?</h2>${sides}
+      <h2>Note ${a.code === "other" ? "(required for Other)" : "(optional)"}</h2>
+      <textarea id="note" placeholder="Why you hesitated, or what the reason is">${esc(a.note || "")}</textarea>
+      <div class="nav">
+        <button id="prev" ${idx === 0 ? "disabled" : ""}>← Previous</button>
+        <button id="next" class="primary">${idx === L.length - 1 ? (mode === "code" ? "Finish" : "Done") : "Next →"}</button>
+      </div>
+      <h2>Jump to</h2><div class="dots">${dots}</div>
+    </div>`;
+
+  document.querySelectorAll('input[name=code]').forEach((r) => r.onchange = () => set("code", r.value));
+  document.querySelectorAll('input[name=side]').forEach((r) => r.onchange = () => set("side", r.value));
+  $("#note").oninput = (e) => { const b = bucket(); b[it.id] = { ...(b[it.id] || {}), note: e.target.value }; save(); };
+  $("#note").onblur = () => render();
+  $("#prev").onclick = () => { idx = Math.max(0, idx - 1); render(); };
+  $("#next").onclick = () => {
+    if (idx < L.length - 1) { idx++; render(); }
+    else if (mode === "code" && allCoded) { idx = -1; render(); }
+    else if (mode === "recheck") { mode = "code"; idx = -1; render(); }
+  };
+  document.querySelectorAll(".dot").forEach((d) => d.onclick = () => { idx = +d.dataset.k; render(); });
+  const hit = $("#hit"); if (hit) hit.scrollIntoView({ block: "center" });
+  window.scrollTo(0, 0);
+}
+
+function renderSummary() {
+  const rows = book.codes.map((c) => {
+    const n = items.filter((i) => state.codes[i.id]?.code === c.value).length;
+    return `<tr><td>${esc(c.label)}</td><td>${n}</td></tr>`;
+  }).join("");
+  const rc = recheckIds(); const same = rc.filter((id) => state.recheck[id]?.code && state.recheck[id].code === state.codes[id]?.code).length;
+  const rcDone = rc.filter((id) => state.recheck[id]?.code).length;
+  $("#main").innerHTML = `<div class="card" style="grid-column:1/-1">
+    <h2>All ${items.length} snippets coded</h2>
+    <table><tr><th>Code</th><th>Snippets</th></tr>${rows}</table>
+    <p>${rcDone ? `Re-check: ${same} of ${rcDone} matched your first answer.` : "Next: take a break, then press <b>Start re-check</b>."}</p>
+    <p class="muted">The full analysis (by tool flag, by side, re-check agreement) comes from <code>scripts/coding_summary.py</code>.</p>
+    <button id="review">Review answers</button></div>`;
+  $("#review").onclick = () => { idx = 0; render(); };
+}
+
+$("#modeBtn").onclick = () => { mode = mode === "code" ? "recheck" : "code"; idx = 0; render(); };
+document.addEventListener("keydown", (e) => {
+  if (e.target.tagName === "TEXTAREA" || idx < 0) return;
+  const k = e.key;
+  if (k >= "1" && k <= String(book.codes.length)) set("code", book.codes[+k - 1].value);
+  else if (["t", "o", "u"].includes(k.toLowerCase())) set("side", { t: "tutor", o: "tool", u: "unsure" }[k.toLowerCase()]);
+  else if (k === "ArrowRight") $("#next")?.click();
+  else if (k === "ArrowLeft") $("#prev")?.click();
+});
+
+(async () => {
+  [book, items, state] = await Promise.all(["/api/codebook", "/api/items", "/api/codes"].map((u) => fetch(u).then((r) => r.json())));
+  state.codes ||= {}; state.recheck ||= {};
+  const first = items.findIndex((i) => !isDone(i.id, state.codes));
+  idx = first === -1 ? 0 : first;
+  if (!Object.keys(state.codes).length) $("#guide").open = true;
+  render();
+})();
+</script>
+</body>
+</html>
