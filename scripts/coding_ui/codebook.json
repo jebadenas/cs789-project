@@ -1,7 +1,7 @@
 {
-  "name": "Why did the tutor say 'no problem'?",
+  "name": "What does this passage actually describe?",
   "version": 2,
-  "rule": "Pick the ONE code that best explains why a reasonable reader would say this passage shows no current problem. If two fit, take the one higher in this list.",
+  "rule": "Read the passage in context and code what it describes, as an independent reader. Pick ONE code; if two fit, take the one higher in this list.",
   "codes": [
     {
       "value": "resolved",
@@ -48,12 +48,12 @@
   ],
   "side": [
     {
-      "value": "tutor",
-      "label": "Tutor: no problem here"
+      "value": "tool",
+      "label": "Yes, the flag was reasonable"
     },
     {
-      "value": "tool",
-      "label": "Tool: the flag was fair"
+      "value": "tutor",
+      "label": "No, 'None' was right"
     },
     {
       "value": "unsure",

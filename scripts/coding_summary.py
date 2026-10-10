@@ -48,7 +48,7 @@ def main() -> None:
 
     coded = {k: v for k, v in codes.items() if v.get("code")}
     n = len(coded)
-    out = [f"# Why tutors rejected the tool's flags (n = {n} snippets)\n"]
+    out = [f"# What the passages tutors rejected actually describe (n = {n} snippets)\n"]
     p = out.append
 
     p("## 1. Reasons\n")
@@ -69,7 +69,7 @@ def main() -> None:
             for f in flags) + " |")
     p("| **Total** | " + " | ".join(str(sum(tool[k] == f for k in coded)) for f in flags) + " |")
 
-    p("\n## 3. Who the coder sided with\n")
+    p("\n## 3. Was the tool's flag reasonable? (tool = yes, tutor = no)\n")
     side = Counter(v.get("side", "(blank)") for v in coded.values())
     p(", ".join(f"{s}: {side[s]}" for s in ["tutor", "tool", "unsure", "(blank)"] if side[s]))
     p("\n| Reason | tutor | tool | unsure |")

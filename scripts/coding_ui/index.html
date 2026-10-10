@@ -65,7 +65,7 @@
 </head>
 <body>
 <header>
-  <h1>Why did the tutor say "no problem"?</h1>
+  <h1>What does this passage actually describe?</h1>
   <span id="progress" class="muted"></span>
   <span style="flex:1"></span>
   <button id="modeBtn"></button>
@@ -78,13 +78,14 @@
     <ol>
       <li><b>Read the whole highlighted passage, then the text around it.</b> You are judging what the
         tutor saw: the passage in its context.</li>
-      <li><b>Ask one question:</b> why would a sensible reader say this shows <i>no current problem</i>?
-        Pick the one code that answers it best. If two fit, take the one higher in the list.</li>
+      <li><b>Code the passage yourself:</b> what does it actually describe? You are an independent
+        reader, not guessing why the tutor said None. Pick the one code that fits best. If two fit,
+        take the one higher in the list.</li>
       <li><b>Code what is written, not what you know about the team.</b> Don't use anything outside the page.</li>
-      <li><b>If you think there IS a real problem, code "Genuine problem"</b> and side with the tool.
-        Say in the note what kind of problem it is (it may not be the one the tool flagged).</li>
-      <li><b>Then say who you side with.</b> "Tutor" if you also see no problem, "Tool" if the flag was fair
-        and the tutor was strict, "Unsure" otherwise. This is separate from the code.</li>
+      <li><b>If you see a real, current problem, code "Genuine problem"</b> and say in the note what
+        kind it is (it may not be the one the tool flagged).</li>
+      <li><b>Then answer: was the tool's flag reasonable?</b> Yes, no, or unsure. Usually this follows
+        from your code, but not always: a minor issue can still be a fair flag.</li>
       <li><b>Write a note</b> whenever you hesitate or choose "Other". One line is enough. Notes are
         where new codes come from.</li>
       <li><b>Don't change the codes halfway through.</b> If a new reason keeps coming up, note it and keep
@@ -92,7 +93,7 @@
       <li><b>When all are coded, take a break, then do the re-check.</b> The app shows 10 snippets again
         without your earlier answer. Comparing the two tells us how stable your coding is.</li>
     </ol>
-    <p class="muted">Keys: 1–7 pick a code · T / O / U pick a side · ← → move · the passage is highlighted.</p>
+    <p class="muted">Keys: 1–7 pick a code · Y / N / U answer whether the flag was reasonable · ← → move · the passage is highlighted.</p>
   </details>
 </div>
 
@@ -163,7 +164,7 @@ function render() {
   const sides = book.side.map((s) => `
     <label class="opt ${a.side === s.value ? "sel" : ""}" style="display:inline-block;margin-right:6px">
       <input type="radio" name="side" value="${s.value}" ${a.side === s.value ? "checked" : ""}>${esc(s.label)}
-      <span class="key">${{ tutor: "T", tool: "O", unsure: "U" }[s.value]}</span></label>`).join("");
+      <span class="key">${{ tool: "Y", tutor: "N", unsure: "U" }[s.value]}</span></label>`).join("");
   const dots = L.map((x, k) => `<div class="dot ${isDone(x.id) ? "done" : ""} ${k === idx ? "cur" : ""}" data-k="${k}">${x.n}</div>`).join("");
 
   $("#main").innerHTML = `
@@ -171,13 +172,13 @@ function render() {
       ${mode === "recheck" ? `<div class="banner">Re-check: code this again from scratch. Your first answer is hidden on purpose.</div>` : ""}
       <div class="muted" style="font-size:13px">Snippet ${it.n} of ${items.length}</div>
       <div style="margin:6px 0">Tool flagged: <span class="flag">${esc(FLAG_LABEL[it.toolFlag] || it.toolFlag)}</span></div>
-      <div class="muted" style="font-size:13px">Tutor answered: <b>None — doesn't indicate any of these</b></div>
+      <div class="muted" style="font-size:13px">Tutor answered: <b>None — doesn't indicate any of these</b> (shown for context only)</div>
       ${ctx.found ? "" : `<div class="banner">Couldn't locate this passage in the journal text, so only the passage is shown.</div>`}
       <div class="journal" id="journal">${esc(ctx.before)}<mark id="hit">${esc(ctx.match)}</mark>${esc(ctx.after)}</div>
     </div>
     <div class="card">
-      <h2>Why "no problem"? (pick one)</h2>${opts}
-      <h2>Who do you side with?</h2>${sides}
+      <h2>What does the passage describe? (pick one)</h2>${opts}
+      <h2>Was the tool's flag reasonable?</h2>${sides}
       <h2>Note ${a.code === "other" ? "(required for Other)" : "(optional)"}</h2>
       <textarea id="note" placeholder="Why you hesitated, or what the reason is">${esc(a.note || "")}</textarea>
       <div class="nav">
@@ -223,7 +224,7 @@ document.addEventListener("keydown", (e) => {
   if (e.target.tagName === "TEXTAREA" || idx < 0) return;
   const k = e.key;
   if (k >= "1" && k <= String(book.codes.length)) set("code", book.codes[+k - 1].value);
-  else if (["t", "o", "u"].includes(k.toLowerCase())) set("side", { t: "tutor", o: "tool", u: "unsure" }[k.toLowerCase()]);
+  else if (["y", "n", "u"].includes(k.toLowerCase())) set("side", { y: "tool", n: "tutor", u: "unsure" }[k.toLowerCase()]);
   else if (k === "ArrowRight") $("#next")?.click();
   else if (k === "ArrowLeft") $("#prev")?.click();
 });
