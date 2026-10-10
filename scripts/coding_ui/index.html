@@ -138,10 +138,11 @@ function save() {
 function set(field, value) {
   const it = list()[idx]; const b = bucket();
   b[it.id] = { ...(b[it.id] || {}), [field]: value, at: new Date().toISOString() };
-  save(); render();
+  save(); render(false);
 }
 
-function render() {
+function render(scroll = true) {
+  const keepY = window.scrollY, keepJ = document.querySelector("#journal")?.scrollTop;
   const L = list(); const it = L[idx];
   const doneN = L.filter((i) => isDone(i.id)).length;
   const allCoded = items.every((i) => isDone(i.id, state.codes));
@@ -191,7 +192,7 @@ function render() {
   document.querySelectorAll('input[name=code]').forEach((r) => r.onchange = () => set("code", r.value));
   document.querySelectorAll('input[name=side]').forEach((r) => r.onchange = () => set("side", r.value));
   $("#note").oninput = (e) => { const b = bucket(); b[it.id] = { ...(b[it.id] || {}), note: e.target.value }; save(); };
-  $("#note").onblur = () => render();
+  $("#note").onblur = () => render(false);
   $("#prev").onclick = () => { idx = Math.max(0, idx - 1); render(); };
   $("#next").onclick = () => {
     if (idx < L.length - 1) { idx++; render(); }
@@ -199,8 +200,14 @@ function render() {
     else if (mode === "recheck") { mode = "code"; idx = -1; render(); }
   };
   document.querySelectorAll(".dot").forEach((d) => d.onclick = () => { idx = +d.dataset.k; render(); });
-  const hit = $("#hit"); if (hit) hit.scrollIntoView({ block: "center" });
-  window.scrollTo(0, 0);
+  if (scroll) {
+    const j = $("#journal"), hit = $("#hit");
+    if (j && hit) j.scrollTop = hit.offsetTop - j.offsetTop - j.clientHeight / 3;
+    window.scrollTo(0, 0);
+  } else {
+    if (keepJ != null && $("#journal")) $("#journal").scrollTop = keepJ;
+    window.scrollTo(0, keepY);
+  }
 }
 
 function renderSummary() {
