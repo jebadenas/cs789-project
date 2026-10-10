@@ -72,9 +72,6 @@ def build_items(cases_path: Path, responses: Path) -> list[dict]:
 
 
 def make_handler(items: list[dict], store: Path):
-    page = (HERE / "index.html").read_bytes()
-    codebook = (HERE / "codebook.json").read_bytes()
-
     class H(BaseHTTPRequestHandler):
         def _send(self, code: int, body: bytes, ctype: str) -> None:
             self.send_response(code)
@@ -85,9 +82,9 @@ def make_handler(items: list[dict], store: Path):
 
         def do_GET(self):
             if self.path in ("/", "/index.html"):
-                return self._send(200, page, "text/html; charset=utf-8")
+                return self._send(200, (HERE / "index.html").read_bytes(), "text/html; charset=utf-8")
             if self.path == "/api/codebook":
-                return self._send(200, codebook, "application/json")
+                return self._send(200, (HERE / "codebook.json").read_bytes(), "application/json")
             if self.path == "/api/items":
                 return self._send(200, json.dumps(items).encode(), "application/json")
             if self.path == "/api/codes":
