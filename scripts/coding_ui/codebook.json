@@ -1,30 +1,63 @@
 {
   "name": "Why did the tutor say 'no problem'?",
-  "version": 1,
+  "version": 2,
   "rule": "Pick the ONE code that best explains why a reasonable reader would say this passage shows no current problem. If two fit, take the one higher in this list.",
   "codes": [
-    {"value": "resolved", "label": "Already resolved",
-     "definition": "The passage describes a problem the team has fixed or is handling successfully.",
-     "example": "After last week's issue we split the backend tasks more evenly."},
-    {"value": "future", "label": "Future or hypothetical",
-     "definition": "A plan, intention, worry or guess. Nothing has gone wrong yet.",
-     "example": "We need to make sure we communicate better next time."},
-    {"value": "setback", "label": "Normal setback",
-     "definition": "Something went wrong with the work (delay, bug, changed plan) but nothing broke down between people.",
-     "example": "Our deployment took longer than we planned."},
-    {"value": "too_minor", "label": "Real but minor",
-     "definition": "A genuine people or workload issue, but small enough that a tutor would not act on it.",
-     "example": "One member was a bit quiet in Monday's meeting."},
-    {"value": "nothing", "label": "Nothing there",
-     "definition": "The passage does not describe a problem at all (neutral or positive).",
-     "example": "I worked on the login page this week."},
-    {"value": "other", "label": "Other",
-     "definition": "None of the above. Write a short note saying why.",
-     "example": ""}
+    {
+      "value": "resolved",
+      "label": "Already resolved",
+      "definition": "The passage describes a problem the team has fixed or is handling successfully.",
+      "example": "After last week's issue we split the backend tasks more evenly."
+    },
+    {
+      "value": "future",
+      "label": "Future or hypothetical",
+      "definition": "A plan, intention, worry or guess. Nothing has gone wrong yet.",
+      "example": "We need to make sure we communicate better next time."
+    },
+    {
+      "value": "setback",
+      "label": "Normal setback",
+      "definition": "Something went wrong with the work (delay, bug, changed plan) but nothing broke down between people.",
+      "example": "Our deployment took longer than we planned."
+    },
+    {
+      "value": "too_minor",
+      "label": "Real but minor",
+      "definition": "A genuine people or workload issue, but small enough that a tutor would not act on it.",
+      "example": "One member was a bit quiet in Monday's meeting."
+    },
+    {
+      "value": "nothing",
+      "label": "Nothing there",
+      "definition": "The passage does not describe a problem at all (neutral or positive).",
+      "example": "I worked on the login page this week."
+    },
+    {
+      "value": "genuine",
+      "label": "Genuine problem",
+      "definition": "In your reading the passage shows a real, current problem (of any kind) that a tutor should know about; the tutor's 'None' looks like a miss. Say which kind in the note.",
+      "example": "Two of us did almost all the work again this fortnight and nobody has said anything."
+    },
+    {
+      "value": "other",
+      "label": "Other",
+      "definition": "None of the above. Write a short note saying why.",
+      "example": ""
+    }
   ],
   "side": [
-    {"value": "tutor", "label": "Tutor: no problem here"},
-    {"value": "tool", "label": "Tool: the flag was fair"},
-    {"value": "unsure", "label": "Unsure"}
+    {
+      "value": "tutor",
+      "label": "Tutor: no problem here"
+    },
+    {
+      "value": "tool",
+      "label": "Tool: the flag was fair"
+    },
+    {
+      "value": "unsure",
+      "label": "Unsure"
+    }
   ]
 }
