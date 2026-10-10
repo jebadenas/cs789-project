@@ -144,9 +144,15 @@ Decision recorded so the question isn't reopened later.
 - **Applied to:** clean real matrices + synthetic teams (N = 4, 5, 6).
 - **Output:** grouped bar chart, mean Attack Delta per model per attack,
   Monte-Carlo error bars on #4; standalone HTML → `output/attacks/`.
-- **Self-inflation** (rate self high) is intentionally **not** a vector:
-  all models exclude the diagonal, so it is a structural no-op — noted to
-  pre-empt the reviewer question.
+- **Self-inflation** (rate self high) — **corrected 2026-10-11, now vector
+  #7.** It was listed here as a structural no-op because every model excludes
+  the diagonal. That holds for the self-score itself but not on the fixed
+  10·N instrument: points kept for self are withheld from peers, which lowers
+  their received scores and raises the inflater's relative weight under
+  receiver-side normalisation (baseline_normalised, the 2026 CS399 formula).
+  Implemented as `transforms.self_inflation` (one rater moves half of every
+  peer score to self, budget conserved). Real data only (synthetic matrices
+  carry no self-score).
 
 ---
 

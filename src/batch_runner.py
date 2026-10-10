@@ -16,6 +16,7 @@ import numpy as np
 
 from src.evaluation.rank_reversal import RankReversalSummary, compute_rank_reversals
 from src.models.baseline import baseline_normalised
+from src.models.impartial import impartial_share
 from src.models.peerrank_impute import peerrank_impute
 from src.models.peerrank_exclude import peerrank_exclude
 from src.models.webpa import webpa
@@ -41,6 +42,9 @@ MODELS: dict[str, Callable[[ScoreMatrix], ModelResult]] = {
     "webpa": webpa,
     "peerhits-impute": peerhits_impute,
     "peerhits-exclude": peerhits_exclude,
+    # 2026 CS399 weighting with rater-side, self-excluded normalisation
+    # (decisions.md 2026-10-11): impartial, so no self-score attack can move it.
+    "impartial": impartial_share,
 }
 
 

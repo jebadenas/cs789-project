@@ -24,7 +24,7 @@ from src.reporting.data_quality import build_report, render_markdown, render_jso
 DATA_DIR = Path(__file__).parent.parent / "data"
 MODEL_NAMES = {
     "baseline", "peerrank-impute", "peerrank-exclude",
-    "webpa", "peerhits-impute", "peerhits-exclude",
+    "webpa", "peerhits-impute", "peerhits-exclude", "impartial",
 }
 SKIP_NO_DATA = pytest.mark.skipif(
     not DATA_DIR.exists() or not list(DATA_DIR.glob("*.csv")),
@@ -163,13 +163,13 @@ class TestAggregateReversals:
 
     @SKIP_NO_DATA
     def test_all_advanced_models_present(self):
-        """Reversal stats computed for all 5 advanced models."""
+        """Reversal stats computed for all 6 advanced models."""
         batch = run_full_dataset(DATA_DIR, progress=False)
         agg = compute_aggregate_reversals(batch)
 
         expected = {
             "peerrank-impute", "peerrank-exclude",
-            "webpa", "peerhits-impute", "peerhits-exclude",
+            "webpa", "peerhits-impute", "peerhits-exclude", "impartial",
         }
         assert set(agg.keys()) == expected
 
@@ -209,7 +209,7 @@ class TestReportGeneration:
         assert report.total_matrices == _expected_matrix_count()
         assert report.succeeded == len(batch.succeeded)
         assert len(report.convergence) == 4  # 4 iterative models
-        assert len(report.reversals) == 5  # 5 advanced models
+        assert len(report.reversals) == 6  # 6 advanced models
         assert report.team_sizes["min"] > 0
         assert report.iwf_range["min"] >= 0
 

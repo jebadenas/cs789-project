@@ -22,6 +22,10 @@ import numpy as np
 from src.parsing.schemas import ScoreMatrix
 
 
+class AttackNotApplicable(ValueError):
+    """The attack has nothing to act on for this matrix; skip, don't fail."""
+
+
 def _submitter_cols(matrix: np.ndarray) -> list[int]:
     """Column indices that are raters (not entirely NaN)."""
     return [j for j in range(matrix.shape[1])
@@ -140,6 +144,50 @@ def zero_self(
         if self_present:
             col[j] = 0.0           # colluder awards self 0 (real CS399 data)
         m[:, j] = col
+    return _with_matrix(sm, m)
+
+
+def self_inflation(
+    sm: ScoreMatrix,
+    inflater: int | None = None,
+    *,
+    fraction: float = 0.5,
+) -> ScoreMatrix:
+    """#7 Self-inflation — one rater moves part of their peer budget to self.
+
+    The rater keeps their total but takes ``fraction`` of every score they
+    gave a peer and adds it to their own self-score. Budget is conserved.
+
+    Self-scores are excluded by every model, so this used to be listed as a
+    structural no-op (spec, "Self-inflation"). On the fixed 10·N instrument it
+    is not: the points kept for self are withheld from peers, which lowers the
+    peers' received scores and so raises the inflater's *relative* weight
+    under any receiver-side normalisation (baseline_normalised = the 2026
+    CS399 formula). Only rater-side, self-excluded normalisation (``impartial``,
+    PeerRank's share step) is unaffected.
+
+    Needs a recorded self-score: on the synthetic self-excluded form (NaN
+    diagonal) there is no budget to move, so it raises
+    ``AttackNotApplicable`` and the runner skips it.
+    """
+    m = sm.matrix.copy()
+    n = m.shape[0]
+    subs = [j for j in _submitter_cols(m) if np.isfinite(m[j, j])]
+    if not subs:
+        raise AttackNotApplicable("self_inflation needs a recorded self-score")
+    if inflater is None:
+        inflater = subs[0]
+    j = inflater
+
+    col = m[:, j].copy()
+    moved = 0.0
+    for i in range(n):
+        if i != j and np.isfinite(col[i]):
+            take = col[i] * fraction
+            col[i] -= take
+            moved += take
+    col[j] += moved
+    m[:, j] = col
     return _with_matrix(sm, m)
 
 

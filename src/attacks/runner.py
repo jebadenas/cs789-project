@@ -21,6 +21,8 @@ import numpy as np
 from src.attacks.delta import MonteCarloResult, attack_delta, monte_carlo_single_outlier
 from src.attacks.synthetic import SyntheticTeam
 from src.attacks.transforms import (
+    AttackNotApplicable,
+    self_inflation,
     targeted_downvote,
     uniform_inflation,
     zero_self,
@@ -36,6 +38,7 @@ DETERMINISTIC_ATTACKS: dict[str, Callable[[ScoreMatrix], ScoreMatrix]] = {
     "zero-self-full": lambda sm: zero_self(sm, full=True),
     "zero-self-partial": lambda sm: zero_self(sm, full=False),
     "targeted-downvote": targeted_downvote,
+    "self-inflation": self_inflation,
 }
 SINGLE_OUTLIER = "single-outlier"
 
@@ -150,6 +153,8 @@ def _eval(
                     source, team, attack_name, model_name,
                     delta=attack_delta(base, res),
                 ))
+            except AttackNotApplicable:
+                continue  # e.g. self-inflation on self-excluded synthetic data
             except Exception as exc:
                 records.append(AttackRecord(
                     source, team, attack_name, model_name,
